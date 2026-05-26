@@ -1,9 +1,19 @@
-# Sử dụng base image là Nginx để phục vụ file tĩnh
+# Stage 1: Build the Flutter web app
+FROM ghcr.io/cirruslabs/flutter:stable AS build
+
+WORKDIR /app
+COPY . .
+RUN flutter pub get
+RUN flutter build web --release
+
+# Stage 2: Serve with Nginx
 FROM nginx:alpine
 
-# Copy file build từ máy của bạn vào thư mục web của Nginx
-# Lưu ý: Bạn cần chạy 'flutter build web' ở máy trước khi push
-COPY build/web /usr/share/nginx/html
+# Copy built web files
+COPY --from=build /app/build/web /usr/share/nginx/html
 
-EXPOSE 80
+# Configure Nginx to use Railway's PORT environment variable
+RUN echo 'server { listen ${PORT}; location / { root /usr/share/nginx/html; index index.html; try_files $uri $uri/ /index.html; } }' > /etc/nginx/templates/default.conf.template
+
+EXPOSE ${PORT}
 CMD ["nginx", "-g", "daemon off;"]
