@@ -1,0 +1,400 @@
+================================================================================
+                    HƯỚNG DẪN CẤU TRÚC DỰ ÁN FLUTTER
+                   Quản Lý Phòng Máy (Computer Room Management)
+================================================================================
+
+DỰ ÁN ĐƯỢC THIẾT KẾ THEO KIẾN TRÚC CLEAN ARCHITECTURE (4 LỚP)
+
+================================================================================
+1. PHÂN CẤP KIẾN TRÚC
+================================================================================
+
+Presentation Layer (Lớp Trình Bày)
+    ↓ phụ thuộc vào
+Domain Layer (Lớp Miền)
+    ↓ phụ thuộc vào
+Data Layer (Lớp Dữ Liệu)
+    ↓ phụ thuộc vào
+Core Layer (Lớp Cốt Lõi)
+
+================================================================================
+2. CỤM THƯ MỤC CHÍNH
+================================================================================
+
+📁 lib/
+│
+├─ 📁 core/ (LỚP CỐT LÕI)
+│  │   Chứa: Hằng số, Network/HTTP, Router, Utilities
+│  ├─ constants/        → Các giá trị không thay đổi (API URLs, Strings, etc.)
+│  ├─ network/          → Cấu hình HTTP client, Interceptor
+│  └─ router/           → Định nghĩa các routes, navigation paths
+│
+├─ 📁 domain/ (LỚP MIỀN - BUSINESS LOGIC)
+│  │   Chứa: Entities, Abstract Repositories, Use Cases
+│  │   ⚠️  KHÔNG PHỤ THUỘC VÀO BẤT KỲ FRAMEWORK NÀO (Pure Dart)
+│  │
+│  ├─ 📁 entities/
+│  │  │   Tài nguyên: user_entity.dart, schedule_entity.dart, room_entity.dart,
+│  │  │              attendance_entity.dart, incident_entity.dart,
+│  │  │              equipment_entity.dart
+│  │  └─ Mô tả: Plain Dart classes đại diện cho các đối tượng kinh doanh
+│  │            (Users, Schedules, Rooms, Computers, Equipment, etc.)
+│  │            Không chứa JSON serialization hay logic cơ sở dữ liệu
+│  │            Định nghĩa toán tử == và hashCode để so sánh
+│  │
+│  ├─ 📁 repositories/
+│  │  │   Tài nguyên: auth_repository.dart, schedule_repository.dart,
+│  │  │              attendance_repository.dart, equipment_repository.dart
+│  │  └─ Mô tả: Abstract classes định nghĩa các hợp đồng (contracts)
+│  │            Presentation layer gọi qua các abstract repositories này
+│  │            Implementation thực tế được cung cấp từ Data layer
+│  │            Giúp test và swap implementations dễ dàng
+│  │
+│  └─ 📁 usecases/
+│     │   Tài nguyên: login_usecase.dart, get_schedule_usecase.dart,
+│     │              book_room_usecase.dart, record_attendance_usecase.dart,
+│     │              report_incident_usecase.dart
+│     └─ Mô tả: Classes encapsulate các specific business operations
+│                Mỗi Use Case làm MỘT việc (Single Responsibility Principle)
+│                Chứa business logic như validation, authorization, workflows
+│                Dependencies: Entities + Abstract Repositories
+│
+├─ 📁 data/ (LỚP DỮ LIỆU - DATA SOURCES & REPOSITORIES)
+│  │   Chứa: Data Sources, Models, Repository Implementations
+│  │
+│  ├─ 📁 datasources/
+│  │  │   Tài nguyên: api_service.dart, auth_service.dart, schedule_service.dart
+│  │  └─ Mô tả: Classes gọi API, Database, Local Storage, etc.
+│  │            Mỗi service chịu trách nhiệm một phần dữ liệu
+│  │            api_service.dart: HTTP client base class
+│  │            auth_service.dart: Login, Token management endpoints
+│  │            schedule_service.dart: Schedule, Room booking endpoints
+│  │
+│  ├─ 📁 models/
+│  │  │   Tài nguyên: user_model.dart, schedule_model.dart
+│  │  └─ Mô tả: Classes được deserialized từ JSON responses
+│  │            Có @Freezed annotation để tạo immutable objects
+│  │            Có fromJson/toJson cho JSON serialization
+│  │            ⚠️  CHỈ dùng trong Data layer, không export ra ngoài!
+│  │
+│  └─ 📁 repositories/
+│     │   Tài nguyên: auth_repository_impl.dart, schedule_repository_impl.dart,
+│     │              attendance_repository_impl.dart, equipment_repository_impl.dart
+│     └─ Mô tả: Concrete implementations của domain repositories
+│                Chuyển đổi Data Models → Domain Entities
+│                Gọi Data Sources và xử lý responses
+│                Dependency Injection sẽ inject implementations này
+│
+└─ 📁 presentation/ (LỚP TRÌNH BÀY - UI & STATE MANAGEMENT)
+   │   Chứa: UI Screens, Widgets, ViewModels (State Management)
+   │   Sử dụng Provider pattern cho state management
+   │
+   ├─ 📁 providers/
+   │  │   Tài nguyên: schedule_viewmodel.dart, login_viewmodel.dart
+   │  └─ Mô tả: ViewModels quản lý state cho UI
+   │            Gọi Use Cases từ Domain layer
+   │            Không nên trực tiếp gọi Data layer services
+   │            Sử dụng Provider package để expose state
+   │
+   ├─ 📁 screens/
+   │  │   Tài nguyên: login_screen.dart, schedule_screen.dart, etc.
+   │  └─ Mô tả: Các StatefulWidget/StatelessWidget hiển thị UI
+   │            Consume data từ providers
+   │            Dispatch actions qua providers
+   │
+   └─ 📁 widgets/
+       │   Tài nguyên: custom_app_bar.dart, schedule_item.dart, etc.
+       └─ Mô tả: Reusable UI components
+                  Stateless widgets cho UI pieces
+                  Không chứa business logic, chỉ UI rendering
+
+================================================================================
+3. DEPENDENCY FLOW (HƯỚNG PHỤ THUỘC)
+================================================================================
+
+Chỉ được phép phụ thuộc vào LAYERS DƯỚI:
+
+Presentation Layer
+    ↓ imports Domain (không import Data trực tiếp)
+Domain Layer
+    ↓ imports Data
+Data Layer
+    ↓ imports Core
+Core Layer
+    (không import anything else)
+
+FORBIDDEN (CẤM):
+❌ Domain importing Data models
+❌ Presentation importing Data layer services
+❌ Data importing Presentation
+❌ Core importing any business layer
+
+================================================================================
+4. TỆP CHÍNH & MỤC ĐÍCH
+================================================================================
+
+main.dart
+   - Entry point của ứng dụng
+   - Setup Router, Providers, Environment variables
+   - Khởi tạo Material App với Theme
+
+core/constants/
+   - API_BASE_URL, IMAGE_PATHS, DURATION_CONSTANTS
+   - String constants cho labels, error messages
+   - Validation rules
+
+core/network/
+   - ApiService base class với HTTP methods (get, post, put, delete)
+   - Header handling, Token management
+   - Error handling, Request/Response interceptors
+
+core/router/
+   - Route path definitions
+   - Navigation logic
+
+domain/entities/
+   - UserEntity: { id, taiKhoan, hoTen, email, vaiTroId, lopHocId }
+   - ScheduleEntity: { id, ngayHoc, tuanHoc, thu, phongMayId, ... }
+   - RoomEntity: { id, tenPhong, trangThai }
+   - AttendanceEntity: { id, ttDiemDanh, ttMayTinh, ... }
+   - IncidentEntity: { id, moTa, trangThai, mayTinhId, ... }
+   - EquipmentEntity: { id, tenTb, soLuongCon, ... }
+
+domain/repositories/
+   - AuthRepository: login, logout, isLoggedIn, getCurrentUser
+   - ScheduleRepository: getScheduleList, bookRoom
+   - AttendanceRepository: recordAttendance, reportIncident, getHistory
+   - EquipmentRepository: getAllEquipment, getBorrowHistory
+
+domain/usecases/
+   - LoginUseCase(AuthRepository) → call(taiKhoan, matKhau)
+   - GetScheduleUseCase(ScheduleRepository) → call(tuanHoc)
+   - BookRoomUseCase(ScheduleRepository) → call(ngayYeuCau, ...)
+   - RecordAttendanceUseCase(AttendanceRepository) → call(mayTinhId, ...)
+   - ReportIncidentUseCase(AttendanceRepository) → call(mayTinhId, moTa)
+
+data/datasources/
+   - ApiService: Base HTTP client, token headers, error handling
+   - AuthService: /login endpoint, token storage
+   - ScheduleService: /schedule endpoints, room booking
+
+data/models/
+   - UserModel: Freezed, fromJson/toJson, maps to UserEntity
+   - ScheduleModel: Freezed, maps to ScheduleEntity
+
+data/repositories/
+   - AuthRepositoryImpl(AuthService) implements AuthRepository
+   - ScheduleRepositoryImpl(ScheduleService) implements ScheduleRepository
+   - AttendanceRepositoryImpl(ApiService) implements AttendanceRepository
+   - EquipmentRepositoryImpl(ApiService) implements EquipmentRepository
+
+presentation/providers/
+   - LoginViewModel(LoginUseCase): Handles auth state
+   - ScheduleViewModel(GetScheduleUseCase): Handles schedule state
+   - ViewModels provide StateNotifier or similar patterns
+
+presentation/screens/
+   - Stateful/Stateless widgets consuming providers
+   - ListenerWidget, ConsumerWidget patterns from Provider
+
+presentation/widgets/
+   - Reusable UI components (Cards, Buttons, Lists)
+   - Custom widgets for schedule items, user profiles, etc.
+
+================================================================================
+5. DATA FLOW EXAMPLE: USER LOGIN
+================================================================================
+
+1. User taps login button → LoginScreen
+2. LoginScreen calls: context.read<LoginViewModel>().login(taiKhoan, matKhau)
+3. LoginViewModel calls: loginUseCase(taiKhoan, matKhau)
+4. LoginUseCase validates input, then calls: authRepository.login(...)
+5. AuthRepositoryImpl (concrete) calls: authService.login(...)
+6. AuthService makes HTTP POST request to API
+7. API returns UserModel (JSON)
+8. AuthRepositoryImpl converts UserModel → UserEntity
+9. LoginUseCase returns UserEntity
+10. LoginViewModel updates state (success/error)
+11. LoginScreen rebuilds with new state
+
+CRITICAL POINTS:
+- UserModel NEVER leaves Data layer
+- Presentation only sees UserEntity
+- Use Cases encapsulate the validation logic
+- Repositories hide implementation details
+
+================================================================================
+6. HƯỚNG PHÁT TRIỂN (DEVELOPMENT ROADMAP)
+================================================================================
+
+✅ COMPLETED:
+- Domain entities (6 main entities)
+- Domain repositories (4 abstract repositories)
+- Domain use cases (5 primary use cases)
+- Data repositories implementation (4 implementations)
+- Base API service with token handling
+- 2 data models (User, Schedule)
+- Auth service for login
+- Schedule service for bookings
+
+🟡 IN PROGRESS / TODO:
+- Expand data/models/ for remaining 15+ tables
+- Create additional use cases for CRUD operations
+- Implement ViewModel providers with proper state management
+- Add error handling and validation across layers
+- Create test cases for use cases and repositories
+- Add local caching layer (SQLite/Hive)
+- Implement token refresh mechanism
+- Add comprehensive error handling UI
+
+================================================================================
+7. QUY TẮC & BEST PRACTICES
+================================================================================
+
+1. ENTITIES
+   - Pure Dart classes (immutable recommended)
+   - No JSON serialization
+   - No framework-specific code
+   - Represent domain concepts exactly
+
+2. REPOSITORIES (Abstract)
+   - Only method signatures, no implementation
+   - Import only entities, no models
+   - Define clear contracts for data access
+   - One repository per major domain concept
+
+3. USE CASES
+   - One use case = one business operation
+   - Constructor inject dependencies (repositories)
+   - call() method for execution
+   - Input validation in use case, not in UI
+   - Throw meaningful exceptions
+
+4. DATA MODELS
+   - Use Freezed for boilerplate reduction
+   - Include fromJson/toJson
+   - Private constructor (Freezed handles)
+   - Only used in data/datasources and data/repositories
+
+5. REPOSITORIES (Implementation)
+   - Implement domain repository interfaces
+   - Convert Models → Entities before returning
+   - Handle API errors and network issues
+   - Inject data sources in constructor
+
+6. VIEW MODELS
+   - Use Provider's StateNotifier or similar
+   - Inject use cases in constructor
+   - Expose clean state streams
+   - Handle loading/error/success states
+   - No business logic, just orchestration
+
+7. SCREENS & WIDGETS
+   - Consume providers with ConsumerWidget
+   - Display only what ViewModel provides
+   - Dispatch actions via ViewModel methods
+   - Keep UI logic minimal
+
+================================================================================
+8. TESTING STRATEGY
+================================================================================
+
+Domain Layer (Unit Tests - Easy)
+→ Test use cases with mocked repositories
+→ Test entities equality and copyWith
+
+Data Layer (Unit Tests - Medium)
+→ Test repository implementations with mocked services
+→ Mock HTTP responses
+
+Presentation Layer (Widget Tests - Hard)
+→ Mock providers and use cases
+→ Test UI rendering and interactions
+
+Integration Tests (End-to-End)
+→ Use real API or test server
+→ Test full flow from UI to backend
+
+================================================================================
+9. DEPENDENCIES (pubspec.yaml)
+================================================================================
+
+Key packages used:
+- flutter_riverpod / provider → State management
+- freezed_annotation / freezed → Immutable models
+- http → HTTP client
+- dio → Alternative HTTP client
+- get_it → Service locator / DI
+- intl → Internationalization
+- flutter_secure_storage → Secure token storage
+- shared_preferences → Local preferences
+
+================================================================================
+10. ARCHITECTURE BENEFITS
+================================================================================
+
+✓ Testability: Each layer can be tested independently
+✓ Maintainability: Clear separation of concerns
+✓ Scalability: Easy to add new features without affecting others
+✓ Flexibility: Can swap implementations (e.g., switch APIs)
+✓ Code Reuse: Domain logic independent of UI framework
+✓ Team Collaboration: Different teams can work on different layers
+
+================================================================================
+11. FOLDER STRUCTURE QUICK REFERENCE
+================================================================================
+
+lib/
+├── main.dart ................................. App entry point
+├── core/
+│   ├── constants/ ............................. Hardcoded values
+│   ├── network/ ............................... HTTP configuration
+│   └── router/ ................................ Navigation routes
+│
+├── domain/
+│   ├── entities/ ............................. Pure domain objects
+│   ├── repositories/ ......................... Abstract contracts
+│   └── usecases/ ............................. Business operations
+│
+├── data/
+│   ├── datasources/ .......................... API/Storage access
+│   ├── models/ ............................... JSON-serializable objects
+│   └── repositories/ ......................... Concrete implementations
+│
+└── presentation/
+    ├── providers/ ........................... State management
+    ├── screens/ ............................. Full-screen UI
+    └── widgets/ ............................. Reusable components
+
+================================================================================
+12. GHI CHÚ QUAN TRỌNG
+================================================================================
+
+⚠️  Domain layer KHÔNG được phụ thuộc vào Flutter hay bất kỳ package nào
+   → Nếu cần, dependency sẽ được inject vào
+
+⚠️  Models (data/models/) KHÔNG bao giờ được export ra khỏi data layer
+   → Presentation chỉ làm việc với Entities
+
+⚠️  Repositories (abstract) định nghĩa HỢP ĐỒNG
+   → Implementation chi tiết ở data layer
+
+⚠️  Use Cases KHÔNG gọi UI directly
+   → Trả về values hoặc throw exceptions
+
+⚠️  ViewModels KHÔNG chứa business logic
+   → Chỉ orchestrate use cases và update state
+
+================================================================================
+13. LIÊN HỆ & SUPPORT
+================================================================================
+
+Project: Quản Lý Phòng Máy (Computer Room Management)
+Framework: Flutter + Dart
+Architecture: Clean Architecture (4 Layers)
+State Management: Provider Pattern
+API Backend: MariaDB + REST API (localhost:8001)
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
