@@ -1,31 +1,16 @@
-# Sử dụng Ubuntu làm nền tảng
-FROM ubuntu:22.04
-
-# Cài đặt các thư viện cần thiết
-RUN apt-get update && apt-get install -y \
-    git \
-    curl \
-    unzip \
-    xz-utils \
-    && rm -rf /var/lib/apt/lists/*
-
-# Cài đặt Flutter SDK
-RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
-ENV PATH="/usr/local/flutter/bin:${PATH}"
-
-# Chạy lệnh doctor để xác nhận
-RUN flutter doctor
-
-# Thiết lập thư mục làm việc
-WORKDIR /app
-COPY . .
-
-# Build dự án
-RUN flutter pub get
-RUN flutter build web --release
-
-# Sử dụng Nginx để phục vụ file tĩnh
+# Stage 2: Serve
 FROM nginx:alpine
 COPY --from=0 /app/build/web /usr/share/nginx/html
+
+# Cấu hình Nginx lắng nghe cổng $PORT thay vì mặc định là 80
+# Sử dụng 'sh -c' để thay thế biến môi trường PORT vào file config
+RUN echo 'server { \
+    listen ${PORT:-80}; \
+    location / { \
+        root /usr/share/nginx/html; \
+        try_files $uri $uri/ /index.html; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "nginx -g 'daemon off;'"]
