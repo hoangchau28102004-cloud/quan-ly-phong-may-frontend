@@ -27,7 +27,8 @@ class ApiService {
     }
 
     // Fallbacks if env var not provided
-    if (kIsWeb) return 'http://127.0.0.1:8001/api';
+    // if (kIsWeb) return 'http://127.0.0.1:8001/api';
+    if (kIsWeb) return 'https://quan-ly-phong-may-backend.onrender.com';
     if (defaultTargetPlatform == TargetPlatform.android) {
       return 'http://10.0.2.2:8001/api';
     }
