@@ -1,50 +1,36 @@
-# Stage 1: Build Flutter
+# Sử dụng base image là Nginx để phục vụ file tĩnh
+FROM nginx:alpine
+# Sử dụng Ubuntu làm nền tảng
+FROM ubuntu:22.04
 
-FROM ubuntu:22.04 AS build
+# Cài đặt các thư viện cần thiết
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    unzip \
+    xz-utils \
+    && rm -rf /var/lib/apt/lists/*
 
-RUN apt-get update && apt-get install -y git curl unzip xz-utils
-
+# Cài đặt Flutter SDK
 RUN git clone https://github.com/flutter/flutter.git /usr/local/flutter
-
 ENV PATH="/usr/local/flutter/bin:${PATH}"
 
-WORKDIR /app
+# Copy file build từ máy của bạn vào thư mục web của Nginx
+# Lưu ý: Bạn cần chạy 'flutter build web' ở máy trước khi push
+COPY build/web /usr/share/nginx/html
+# Chạy lệnh doctor để xác nhận
+RUN flutter doctor
 
+# Thiết lập thư mục làm việc
+WORKDIR /app
 COPY . .
 
+# Build dự án
 RUN flutter pub get
-
 RUN flutter build web --release
 
-
-
-# Stage 2: Serve với Nginx
-
+# Sử dụng Nginx để phục vụ file tĩnh
 FROM nginx:alpine
-
-COPY --from=build /app/build/web /usr/share/nginx/html
-
-
-
-# Cấu hình Nginx lắng nghe cổng 8001
-
-RUN echo 'server { \
-
-    listen 8001; \
-
-    location / { \
-
-        root /usr/share/nginx/html; \
-
-        try_files $uri $uri/ /index.html; \
-
-    } \
-
-}' > /etc/nginx/conf.d/default.conf
-
-
-
-EXPOSE 8001
-
-CMD ["nginx", "-g", "daemon off;"] docker file bên frontend v đã chuẩn chưa 
-
+COPY --from=0 /app/build/web /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
