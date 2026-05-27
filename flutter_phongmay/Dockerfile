@@ -10,24 +10,21 @@ ENV PATH="/usr/local/flutter/bin:${PATH}"
 
 # Cấu hình Git an toàn để tránh lỗi quyền root trong Docker
 RUN git config --global --add safe.directory /usr/local/flutter
-
-# Chạy tiền kiểm tra để Flutter tự nạp các công cụ web
 RUN flutter doctor
 
 WORKDIR /app
 COPY . .
 
-# === ĐIỂM SỬA CHÍ MẠNG: Nhảy thẳng vào thư mục chứa code Flutter của bạn ===
+# Di chuyển thẳng vào thư mục chứa code Flutter
 WORKDIR /app/flutter_phongmay
 
-# Tiến hành lấy thư viện và biên dịch bản Web từ đúng thư mục
+# Xóa các gói cài đặt cũ nếu lỡ bị kẹt và nạp lại thư viện sạch hoàn toàn
+RUN flutter clean
 RUN flutter pub get
 RUN flutter build web --release
 
-# Stage 2: Cấu hình chạy mượt mà với Nginx Alpine
+# Stage 2: Cấu hình chạy với Nginx Alpine
 FROM nginx:alpine
-
-# Sửa lại đường dẫn lấy file build chuẩn sau khi đổi WORKDIR
 COPY --from=build /app/flutter_phongmay/build/web /usr/share/nginx/html
 
 # Thay thế file cấu hình mặc định bằng biến $PORT động của Railway
