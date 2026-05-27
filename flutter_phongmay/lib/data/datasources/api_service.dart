@@ -8,7 +8,7 @@ class ApiService {
   static String? token;
 
   // Link Server Render chạy online cố định
-  static const String _liveUrl = 'https://quan-ly-phong-may-backend.onrender.com/api';
+  static const String _liveUrl = 'https://quan-ly-phong-may-backend.onrender.com';
 
   // Lấy Base URL một cách thông minh
   static String get baseUrl {
