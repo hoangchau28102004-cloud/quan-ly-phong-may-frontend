@@ -17,13 +17,18 @@ RUN flutter doctor
 WORKDIR /app
 COPY . .
 
-# Tiến hành lấy thư viện và biên dịch bản Web
+# === ĐIỂM SỬA CHÍ MẠNG: Nhảy thẳng vào thư mục chứa code Flutter của bạn ===
+WORKDIR /app/flutter_phongmay
+
+# Tiến hành lấy thư viện và biên dịch bản Web từ đúng thư mục
 RUN flutter pub get
 RUN flutter build web --release
 
 # Stage 2: Cấu hình chạy mượt mà với Nginx Alpine
 FROM nginx:alpine
-COPY --from=build /app/build/web /usr/share/nginx/html
+
+# Sửa lại đường dẫn lấy file build chuẩn sau khi đổi WORKDIR
+COPY --from=build /app/flutter_phongmay/build/web /usr/share/nginx/html
 
 # Thay thế file cấu hình mặc định bằng biến $PORT động của Railway
 CMD sh -c "echo 'server { \
