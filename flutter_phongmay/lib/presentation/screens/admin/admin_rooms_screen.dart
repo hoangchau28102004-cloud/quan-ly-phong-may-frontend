@@ -33,7 +33,23 @@ class AdminRoomsScreen extends StatelessWidget {
                   vertical: 15,
                 ),
               ),
-              onPressed: () {},
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (ctx) => AlertDialog(
+                    title: const Text('Chưa triển khai'),
+                    content: const Text(
+                      'Tính năng thêm máy tính chưa được cài đặt.',
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        child: const Text('Đóng'),
+                      ),
+                    ],
+                  ),
+                );
+              },
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
                 'Thêm Máy Tính Mới',
@@ -48,80 +64,162 @@ class AdminRoomsScreen extends StatelessWidget {
                   color: Colors.white,
                   border: Border.all(color: Colors.grey.shade300),
                 ),
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(
-                        label: Text(
-                          'Mã PC',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isCompact = constraints.maxWidth < 900;
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(
+                          minWidth: constraints.maxWidth.isFinite
+                              ? constraints.maxWidth
+                              : MediaQuery.of(context).size.width,
                         ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Phòng Máy',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Mã QR',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Trạng Thái',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      DataColumn(
-                        label: Text(
-                          'Thao Tác',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                    rows: [
-                      DataRow(
-                        cells: [
-                          const DataCell(Text('PC-01')),
-                          const DataCell(Text('PM-301')),
-                          const DataCell(Text('QR-301-PC01')),
-                          DataCell(
-                            Container(
-                              color: Colors.green,
-                              padding: const EdgeInsets.all(4),
-                              child: const Text(
-                                'Bình Thường',
-                                style: TextStyle(color: Colors.white),
+                        child: SingleChildScrollView(
+                          child: DataTable(
+                            columnSpacing: 24,
+                            columns: isCompact
+                                ? const [
+                                    DataColumn(
+                                      label: Text(
+                                        'Mã PC',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Thao Tác',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ]
+                                : const [
+                                    DataColumn(
+                                      label: Text(
+                                        'Mã PC',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Phòng Máy',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Mã QR',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Trạng Thái',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Thao Tác',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                            rows: [
+                              DataRow(
+                                cells: [
+                                  const DataCell(Text('PC-01')),
+                                  if (!isCompact)
+                                    const DataCell(Text('PM-301')),
+                                  if (!isCompact)
+                                    const DataCell(Text('QR-301-PC01')),
+                                  if (!isCompact)
+                                    DataCell(
+                                      Container(
+                                        color: Colors.green,
+                                        padding: const EdgeInsets.all(4),
+                                        child: const Text(
+                                          'Bình Thường',
+                                          style: TextStyle(color: Colors.white),
+                                        ),
+                                      ),
+                                    ),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.edit,
+                                            color: Colors.blue,
+                                          ),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                title: const Text('Chỉnh sửa'),
+                                                content: const Text(
+                                                  'Chức năng chỉnh sửa máy chưa được cài đặt.',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(ctx).pop(),
+                                                    child: const Text('Đóng'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(
+                                            Icons.qr_code,
+                                            color: Colors.black,
+                                          ),
+                                          onPressed: () {
+                                            showDialog(
+                                              context: context,
+                                              builder: (ctx) => AlertDialog(
+                                                title: const Text('QR code'),
+                                                content: const Text(
+                                                  'Hiển thị QR code chưa được triển khai.',
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.of(ctx).pop(),
+                                                    child: const Text('Đóng'),
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
+                            ],
                           ),
-                          DataCell(
-                            Row(
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () {},
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.qr_code,
-                                    color: Colors.black,
-                                  ),
-                                  onPressed: () {},
-                                ), 
-                              ],
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ),
             ),

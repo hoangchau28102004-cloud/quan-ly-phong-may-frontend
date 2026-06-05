@@ -3,7 +3,8 @@ import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
 // Import 3 màn hình của 3 vai trò
-import 'package:flutter_phongmay/presentation/screens/admin/admin_home.dart';
+// Redirect admins directly to the user management screen
+import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
 import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
 
@@ -46,7 +47,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
           if (user != null) {
             if (user.vaiTroId == 1) {
-              nextScreen = const AdminHome();
+              nextScreen = const UserManagementScreen();
             } else if (user.vaiTroId == 2) {
               nextScreen = const TeacherHome();
             } else {

@@ -8,32 +8,45 @@ class ApiService {
   static String? token;
 
   // Link Server Render chạy online cố định
-  static const String _liveUrl = 'https://quan-ly-phong-may-backend.onrender.com';
+  static const String _liveUrl =
+      'https://quan-ly-phong-may-backend.onrender.com';
 
   // Lấy Base URL một cách thông minh
   static String get baseUrl {
     final envUrl = dotenv.env['API_BASE_URL'];
-    
+
+    String? urlCandidate;
+
+    // 1) Nếu có cấu hình trong .env thì dùng nó
     if (envUrl != null && envUrl.isNotEmpty) {
-      var url = envUrl;
-      
-      // Đảm bảo URL luôn kết thúc bằng '/api'
-      if (!url.endsWith('/api')) {
-        url = url.replaceAll(RegExp(r'/$'), '');
-        url = '$url/api';
-      }
-      
-      // Nếu chạy trên giả lập Android, tự động đổi localhost về IP gateway 10.0.2.2
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        url = url
-            .replaceAll('127.0.0.1', '10.0.2.2')
-            .replaceAll('localhost', '10.0.2.2');
-      }
-      return url;
+      urlCandidate = envUrl;
     }
 
-    // Nếu file .env trống hoặc không có biến API_BASE_URL, tự động dùng link Render online
-    return _liveUrl;
+    // 2) Nếu không có .env và đang chạy ở chế độ debug, mặc định trỏ về server local
+    if (urlCandidate == null || urlCandidate.isEmpty) {
+      if (kDebugMode) {
+        urlCandidate = 'http://127.0.0.1:8001';
+      } else {
+        // Production fallback: dùng server online
+        return _liveUrl;
+      }
+    }
+
+    // Đảm bảo URL luôn kết thúc bằng '/api'
+    var url = urlCandidate;
+    if (!url.endsWith('/api')) {
+      url = url.replaceAll(RegExp(r'/$'), '');
+      url = '$url/api';
+    }
+
+    // Nếu chạy trên giả lập Android, tự động đổi localhost/127.0.0.1 về IP gateway 10.0.2.2
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+      url = url
+          .replaceAll('127.0.0.1', '10.0.2.2')
+          .replaceAll('localhost', '10.0.2.2');
+    }
+
+    return url;
   }
 
   // Cấu hình Header (tự động gắn token nếu đã đăng nhập)
@@ -48,16 +61,44 @@ class ApiService {
   // Hàm GET
   static Future<http.Response> get(String endpoint) async {
     // Đảm bảo endpoint bắt đầu bằng dấu '/' để tránh lỗi nối chuỗi sát nhau
-    final formattedEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+    final formattedEndpoint = endpoint.startsWith('/')
+        ? endpoint
+        : '/$endpoint';
     final url = Uri.parse('$baseUrl$formattedEndpoint');
     return await http.get(url, headers: _headers);
   }
 
   // Hàm POST
-  static Future<http.Response> post(String endpoint, Map<String, dynamic> body) async {
-    final formattedEndpoint = endpoint.startsWith('/') ? endpoint : '/$endpoint';
+  static Future<http.Response> post(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final formattedEndpoint = endpoint.startsWith('/')
+        ? endpoint
+        : '/$endpoint';
     final url = Uri.parse('$baseUrl$formattedEndpoint');
     return await http.post(url, headers: _headers, body: jsonEncode(body));
+  }
+
+  // Hàm PUT
+  static Future<http.Response> put(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final formattedEndpoint = endpoint.startsWith('/')
+        ? endpoint
+        : '/$endpoint';
+    final url = Uri.parse('$baseUrl$formattedEndpoint');
+    return await http.put(url, headers: _headers, body: jsonEncode(body));
+  }
+
+  // Hàm DELETE
+  static Future<http.Response> delete(String endpoint) async {
+    final formattedEndpoint = endpoint.startsWith('/')
+        ? endpoint
+        : '/$endpoint';
+    final url = Uri.parse('$baseUrl$formattedEndpoint');
+    return await http.delete(url, headers: _headers);
   }
 
   // Hàm tiện ích giải mã JSON chống lỗi sập app

@@ -2,7 +2,9 @@ class UserEntity {
   final int id;
   final String taiKhoan;
   final String hoTen;
+  final int trangThai;
   final String? email;
+  final String? soDienThoai;
   final int vaiTroId;
   final int? lopHocId;
 
@@ -10,7 +12,9 @@ class UserEntity {
     required this.id,
     required this.taiKhoan,
     required this.hoTen,
+    this.trangThai = 1,
     this.email,
+    this.soDienThoai,
     required this.vaiTroId,
     this.lopHocId,
   });
@@ -20,7 +24,9 @@ class UserEntity {
     int? id,
     String? taiKhoan,
     String? hoTen,
+    int? trangThai,
     String? email,
+    String? soDienThoai,
     int? vaiTroId,
     int? lopHocId,
   }) {
@@ -28,7 +34,9 @@ class UserEntity {
       id: id ?? this.id,
       taiKhoan: taiKhoan ?? this.taiKhoan,
       hoTen: hoTen ?? this.hoTen,
+      trangThai: trangThai ?? this.trangThai,
       email: email ?? this.email,
+      soDienThoai: soDienThoai ?? this.soDienThoai,
       vaiTroId: vaiTroId ?? this.vaiTroId,
       lopHocId: lopHocId ?? this.lopHocId,
     );
