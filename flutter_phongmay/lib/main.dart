@@ -9,6 +9,8 @@ import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'
 import 'package:flutter_phongmay/presentation/providers/user_viewmodel.dart';
 import 'package:flutter_phongmay/data/repositories/user_repository_impl.dart';
 import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
+// ---> ĐÃ THÊM IMPORT CHO IMPORT_VIEWMODEL Ở ĐÂY <---
+import 'package:flutter_phongmay/presentation/providers/import_viewmodel.dart';
 
 // --- TẦNG GIAO DIỆN ---
 import 'package:flutter_phongmay/presentation/screens/auth/login_screen.dart';
@@ -21,6 +23,7 @@ import 'package:flutter_phongmay/presentation/screens/admin/incident_maintenance
 import 'package:flutter_phongmay/presentation/screens/admin/scheduling_management.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
 import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
 
 void main() async {
   // 1. Thêm 'async'
@@ -50,6 +53,9 @@ void main() async {
           create: (_) => UserViewModel(repository: UserRepositoryImpl()),
         ),
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
+        
+        // ---> ĐÃ ĐĂNG KÝ IMPORT_VIEWMODEL VÀO ĐÂY <---
+        ChangeNotifierProvider(create: (_) => ImportViewModel()),
       ],
       child: const MyApp(),
     ),
@@ -82,6 +88,9 @@ class MyApp extends StatelessWidget {
         '/admin/scheduling': (context) => const SchedulingManagementScreen(),
         '/lecturer_home': (context) => const TeacherHome(),
         '/scanner': (context) => const QRScannerScreen(),
+        
+        // ---> ĐÃ THÊM ROUTE PHIẾU NHẬP MÁY VÀO ĐÂY <---
+        '/admin/import-machine': (context) => const ImportMachineScreen(),
       },
     );
   }

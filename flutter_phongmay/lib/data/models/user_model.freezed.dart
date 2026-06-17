@@ -15,7 +15,8 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$UserModel {
 
- int get id;@JsonKey(name: 'tai_khoan') String get taiKhoan;@JsonKey(name: 'ho_ten') String get hoTen;@JsonKey(name: 'vai_tro_id') int get vaiTroId;@JsonKey(name: 'lop_hoc_id') int? get lopHocId;
+ int get id;@JsonKey(name: 'tai_khoan') String get taiKhoan;@JsonKey(name: 'ho_ten') String get hoTen;@JsonKey(name: 'vai_tro_id') int get vaiTroId;@JsonKey(name: 'lop_hoc_id') int? get lopHocId;// --- KHAI BÁO THÊM CÁC TRƯỜNG CÒN THIẾU Ở ĐÂY ---
+@JsonKey(name: 'email') String? get email;@JsonKey(name: 'so_dien_thoai') String? get soDienThoai;@JsonKey(name: 'trang_thai') int? get trangThai;@JsonKey(name: 'gioi_tinh') String? get gioiTinh;@JsonKey(name: 'ngay_sinh') String? get ngaySinh;
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -28,16 +29,16 @@ $UserModelCopyWith<UserModel> get copyWith => _$UserModelCopyWithImpl<UserModel>
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.taiKhoan, taiKhoan) || other.taiKhoan == taiKhoan)&&(identical(other.hoTen, hoTen) || other.hoTen == hoTen)&&(identical(other.vaiTroId, vaiTroId) || other.vaiTroId == vaiTroId)&&(identical(other.lopHocId, lopHocId) || other.lopHocId == lopHocId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.taiKhoan, taiKhoan) || other.taiKhoan == taiKhoan)&&(identical(other.hoTen, hoTen) || other.hoTen == hoTen)&&(identical(other.vaiTroId, vaiTroId) || other.vaiTroId == vaiTroId)&&(identical(other.lopHocId, lopHocId) || other.lopHocId == lopHocId)&&(identical(other.email, email) || other.email == email)&&(identical(other.soDienThoai, soDienThoai) || other.soDienThoai == soDienThoai)&&(identical(other.trangThai, trangThai) || other.trangThai == trangThai)&&(identical(other.gioiTinh, gioiTinh) || other.gioiTinh == gioiTinh)&&(identical(other.ngaySinh, ngaySinh) || other.ngaySinh == ngaySinh));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,taiKhoan,hoTen,vaiTroId,lopHocId);
+int get hashCode => Object.hash(runtimeType,id,taiKhoan,hoTen,vaiTroId,lopHocId,email,soDienThoai,trangThai,gioiTinh,ngaySinh);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, taiKhoan: $taiKhoan, hoTen: $hoTen, vaiTroId: $vaiTroId, lopHocId: $lopHocId)';
+  return 'UserModel(id: $id, taiKhoan: $taiKhoan, hoTen: $hoTen, vaiTroId: $vaiTroId, lopHocId: $lopHocId, email: $email, soDienThoai: $soDienThoai, trangThai: $trangThai, gioiTinh: $gioiTinh, ngaySinh: $ngaySinh)';
 }
 
 
@@ -48,7 +49,7 @@ abstract mixin class $UserModelCopyWith<$Res>  {
   factory $UserModelCopyWith(UserModel value, $Res Function(UserModel) _then) = _$UserModelCopyWithImpl;
 @useResult
 $Res call({
- int id,@JsonKey(name: 'tai_khoan') String taiKhoan,@JsonKey(name: 'ho_ten') String hoTen,@JsonKey(name: 'vai_tro_id') int vaiTroId,@JsonKey(name: 'lop_hoc_id') int? lopHocId
+ int id,@JsonKey(name: 'tai_khoan') String taiKhoan,@JsonKey(name: 'ho_ten') String hoTen,@JsonKey(name: 'vai_tro_id') int vaiTroId,@JsonKey(name: 'lop_hoc_id') int? lopHocId,@JsonKey(name: 'email') String? email,@JsonKey(name: 'so_dien_thoai') String? soDienThoai,@JsonKey(name: 'trang_thai') int? trangThai,@JsonKey(name: 'gioi_tinh') String? gioiTinh,@JsonKey(name: 'ngay_sinh') String? ngaySinh
 });
 
 
@@ -65,14 +66,19 @@ class _$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? taiKhoan = null,Object? hoTen = null,Object? vaiTroId = null,Object? lopHocId = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? taiKhoan = null,Object? hoTen = null,Object? vaiTroId = null,Object? lopHocId = freezed,Object? email = freezed,Object? soDienThoai = freezed,Object? trangThai = freezed,Object? gioiTinh = freezed,Object? ngaySinh = freezed,}) {
   return _then(_self.copyWith(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,taiKhoan: null == taiKhoan ? _self.taiKhoan : taiKhoan // ignore: cast_nullable_to_non_nullable
 as String,hoTen: null == hoTen ? _self.hoTen : hoTen // ignore: cast_nullable_to_non_nullable
 as String,vaiTroId: null == vaiTroId ? _self.vaiTroId : vaiTroId // ignore: cast_nullable_to_non_nullable
 as int,lopHocId: freezed == lopHocId ? _self.lopHocId : lopHocId // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,soDienThoai: freezed == soDienThoai ? _self.soDienThoai : soDienThoai // ignore: cast_nullable_to_non_nullable
+as String?,trangThai: freezed == trangThai ? _self.trangThai : trangThai // ignore: cast_nullable_to_non_nullable
+as int?,gioiTinh: freezed == gioiTinh ? _self.gioiTinh : gioiTinh // ignore: cast_nullable_to_non_nullable
+as String?,ngaySinh: freezed == ngaySinh ? _self.ngaySinh : ngaySinh // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -157,10 +163,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId, @JsonKey(name: 'email')  String? email, @JsonKey(name: 'so_dien_thoai')  String? soDienThoai, @JsonKey(name: 'trang_thai')  int? trangThai, @JsonKey(name: 'gioi_tinh')  String? gioiTinh, @JsonKey(name: 'ngay_sinh')  String? ngaySinh)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId);case _:
+return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId,_that.email,_that.soDienThoai,_that.trangThai,_that.gioiTinh,_that.ngaySinh);case _:
   return orElse();
 
 }
@@ -178,10 +184,10 @@ return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocI
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId, @JsonKey(name: 'email')  String? email, @JsonKey(name: 'so_dien_thoai')  String? soDienThoai, @JsonKey(name: 'trang_thai')  int? trangThai, @JsonKey(name: 'gioi_tinh')  String? gioiTinh, @JsonKey(name: 'ngay_sinh')  String? ngaySinh)  $default,) {final _that = this;
 switch (_that) {
 case _UserModel():
-return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId);case _:
+return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId,_that.email,_that.soDienThoai,_that.trangThai,_that.gioiTinh,_that.ngaySinh);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -198,10 +204,10 @@ return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocI
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int id, @JsonKey(name: 'tai_khoan')  String taiKhoan, @JsonKey(name: 'ho_ten')  String hoTen, @JsonKey(name: 'vai_tro_id')  int vaiTroId, @JsonKey(name: 'lop_hoc_id')  int? lopHocId, @JsonKey(name: 'email')  String? email, @JsonKey(name: 'so_dien_thoai')  String? soDienThoai, @JsonKey(name: 'trang_thai')  int? trangThai, @JsonKey(name: 'gioi_tinh')  String? gioiTinh, @JsonKey(name: 'ngay_sinh')  String? ngaySinh)?  $default,) {final _that = this;
 switch (_that) {
 case _UserModel() when $default != null:
-return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId);case _:
+return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocId,_that.email,_that.soDienThoai,_that.trangThai,_that.gioiTinh,_that.ngaySinh);case _:
   return null;
 
 }
@@ -213,7 +219,7 @@ return $default(_that.id,_that.taiKhoan,_that.hoTen,_that.vaiTroId,_that.lopHocI
 @JsonSerializable()
 
 class _UserModel implements UserModel {
-  const _UserModel({required this.id, @JsonKey(name: 'tai_khoan') required this.taiKhoan, @JsonKey(name: 'ho_ten') required this.hoTen, @JsonKey(name: 'vai_tro_id') required this.vaiTroId, @JsonKey(name: 'lop_hoc_id') this.lopHocId});
+  const _UserModel({required this.id, @JsonKey(name: 'tai_khoan') required this.taiKhoan, @JsonKey(name: 'ho_ten') required this.hoTen, @JsonKey(name: 'vai_tro_id') required this.vaiTroId, @JsonKey(name: 'lop_hoc_id') this.lopHocId, @JsonKey(name: 'email') this.email, @JsonKey(name: 'so_dien_thoai') this.soDienThoai, @JsonKey(name: 'trang_thai') this.trangThai, @JsonKey(name: 'gioi_tinh') this.gioiTinh, @JsonKey(name: 'ngay_sinh') this.ngaySinh});
   factory _UserModel.fromJson(Map<String, dynamic> json) => _$UserModelFromJson(json);
 
 @override final  int id;
@@ -221,6 +227,12 @@ class _UserModel implements UserModel {
 @override@JsonKey(name: 'ho_ten') final  String hoTen;
 @override@JsonKey(name: 'vai_tro_id') final  int vaiTroId;
 @override@JsonKey(name: 'lop_hoc_id') final  int? lopHocId;
+// --- KHAI BÁO THÊM CÁC TRƯỜNG CÒN THIẾU Ở ĐÂY ---
+@override@JsonKey(name: 'email') final  String? email;
+@override@JsonKey(name: 'so_dien_thoai') final  String? soDienThoai;
+@override@JsonKey(name: 'trang_thai') final  int? trangThai;
+@override@JsonKey(name: 'gioi_tinh') final  String? gioiTinh;
+@override@JsonKey(name: 'ngay_sinh') final  String? ngaySinh;
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
@@ -235,16 +247,16 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.taiKhoan, taiKhoan) || other.taiKhoan == taiKhoan)&&(identical(other.hoTen, hoTen) || other.hoTen == hoTen)&&(identical(other.vaiTroId, vaiTroId) || other.vaiTroId == vaiTroId)&&(identical(other.lopHocId, lopHocId) || other.lopHocId == lopHocId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UserModel&&(identical(other.id, id) || other.id == id)&&(identical(other.taiKhoan, taiKhoan) || other.taiKhoan == taiKhoan)&&(identical(other.hoTen, hoTen) || other.hoTen == hoTen)&&(identical(other.vaiTroId, vaiTroId) || other.vaiTroId == vaiTroId)&&(identical(other.lopHocId, lopHocId) || other.lopHocId == lopHocId)&&(identical(other.email, email) || other.email == email)&&(identical(other.soDienThoai, soDienThoai) || other.soDienThoai == soDienThoai)&&(identical(other.trangThai, trangThai) || other.trangThai == trangThai)&&(identical(other.gioiTinh, gioiTinh) || other.gioiTinh == gioiTinh)&&(identical(other.ngaySinh, ngaySinh) || other.ngaySinh == ngaySinh));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
-int get hashCode => Object.hash(runtimeType,id,taiKhoan,hoTen,vaiTroId,lopHocId);
+int get hashCode => Object.hash(runtimeType,id,taiKhoan,hoTen,vaiTroId,lopHocId,email,soDienThoai,trangThai,gioiTinh,ngaySinh);
 
 @override
 String toString() {
-  return 'UserModel(id: $id, taiKhoan: $taiKhoan, hoTen: $hoTen, vaiTroId: $vaiTroId, lopHocId: $lopHocId)';
+  return 'UserModel(id: $id, taiKhoan: $taiKhoan, hoTen: $hoTen, vaiTroId: $vaiTroId, lopHocId: $lopHocId, email: $email, soDienThoai: $soDienThoai, trangThai: $trangThai, gioiTinh: $gioiTinh, ngaySinh: $ngaySinh)';
 }
 
 
@@ -255,7 +267,7 @@ abstract mixin class _$UserModelCopyWith<$Res> implements $UserModelCopyWith<$Re
   factory _$UserModelCopyWith(_UserModel value, $Res Function(_UserModel) _then) = __$UserModelCopyWithImpl;
 @override @useResult
 $Res call({
- int id,@JsonKey(name: 'tai_khoan') String taiKhoan,@JsonKey(name: 'ho_ten') String hoTen,@JsonKey(name: 'vai_tro_id') int vaiTroId,@JsonKey(name: 'lop_hoc_id') int? lopHocId
+ int id,@JsonKey(name: 'tai_khoan') String taiKhoan,@JsonKey(name: 'ho_ten') String hoTen,@JsonKey(name: 'vai_tro_id') int vaiTroId,@JsonKey(name: 'lop_hoc_id') int? lopHocId,@JsonKey(name: 'email') String? email,@JsonKey(name: 'so_dien_thoai') String? soDienThoai,@JsonKey(name: 'trang_thai') int? trangThai,@JsonKey(name: 'gioi_tinh') String? gioiTinh,@JsonKey(name: 'ngay_sinh') String? ngaySinh
 });
 
 
@@ -272,14 +284,19 @@ class __$UserModelCopyWithImpl<$Res>
 
 /// Create a copy of UserModel
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? taiKhoan = null,Object? hoTen = null,Object? vaiTroId = null,Object? lopHocId = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? taiKhoan = null,Object? hoTen = null,Object? vaiTroId = null,Object? lopHocId = freezed,Object? email = freezed,Object? soDienThoai = freezed,Object? trangThai = freezed,Object? gioiTinh = freezed,Object? ngaySinh = freezed,}) {
   return _then(_UserModel(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int,taiKhoan: null == taiKhoan ? _self.taiKhoan : taiKhoan // ignore: cast_nullable_to_non_nullable
 as String,hoTen: null == hoTen ? _self.hoTen : hoTen // ignore: cast_nullable_to_non_nullable
 as String,vaiTroId: null == vaiTroId ? _self.vaiTroId : vaiTroId // ignore: cast_nullable_to_non_nullable
 as int,lopHocId: freezed == lopHocId ? _self.lopHocId : lopHocId // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,email: freezed == email ? _self.email : email // ignore: cast_nullable_to_non_nullable
+as String?,soDienThoai: freezed == soDienThoai ? _self.soDienThoai : soDienThoai // ignore: cast_nullable_to_non_nullable
+as String?,trangThai: freezed == trangThai ? _self.trangThai : trangThai // ignore: cast_nullable_to_non_nullable
+as int?,gioiTinh: freezed == gioiTinh ? _self.gioiTinh : gioiTinh // ignore: cast_nullable_to_non_nullable
+as String?,ngaySinh: freezed == ngaySinh ? _self.ngaySinh : ngaySinh // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
