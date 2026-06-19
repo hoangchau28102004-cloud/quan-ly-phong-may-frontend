@@ -5,7 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
 // Import 3 màn hình của 3 vai trò
-import 'package:flutter_phongmay/presentation/screens/admin/admin_home.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
 import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
 
@@ -27,29 +27,41 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
+<<<<<<< HEAD
   // 1: Admin, 2: Giảng viên, 3: Sinh viên (Mặc định chọn Sinh viên)
   int _selectedRole = 3;
 
   // Bộ nhận diện cử chỉ cho các đường link
   late TapGestureRecognizer _ctctLinkRecognizer;
   late TapGestureRecognizer _lecturerLinkRecognizer;
+=======
+  // Bộ nhận diện cử chỉ cho các đường link
+  late TapGestureRecognizer _ctctLinkRecognizer;
+>>>>>>> test
 
   @override
   void initState() {
     super.initState();
     // Khởi tạo sự kiện bấm vào link
     _ctctLinkRecognizer = TapGestureRecognizer()..onTap = _launchCTCTUrl;
+<<<<<<< HEAD
     _lecturerLinkRecognizer = TapGestureRecognizer()
       ..onTap = _forgotPasswordLecturer;
+=======
+>>>>>>> test
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+<<<<<<< HEAD
     // Giải phóng bộ nhớ của recognizer
     _ctctLinkRecognizer.dispose();
     _lecturerLinkRecognizer.dispose();
+=======
+    _ctctLinkRecognizer.dispose();
+>>>>>>> test
     super.dispose();
   }
 
@@ -65,6 +77,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+<<<<<<< HEAD
   // Hàm xử lý khi giảng viên / admin quên mật khẩu
   void _forgotPasswordLecturer() {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -74,6 +87,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+=======
+>>>>>>> test
   void _login() async {
     if (_formKey.currentState!.validate()) {
       final viewModel = context.read<LoginViewModel>();
@@ -88,6 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
           Widget nextScreen;
 
           if (user != null) {
+<<<<<<< HEAD
             // --- LOGIC CHẶN ĐĂNG NHẬP SAI TAB CHO 3 VAI TRÒ ---
             if (_selectedRole != user.vaiTroId) {
               String roleName = _selectedRole == 1 
@@ -105,9 +121,13 @@ class _LoginScreenState extends State<LoginScreen> {
             // -------------------------------------------------
 
             // Phân luồng chuyển trang
+=======
+            // TỰ ĐỘNG PHÂN LUỒNG: Hệ thống lấy thẳng vaiTroId từ CSDL để chuyển trang
+            // 1: Admin, 2: Sinh viên, 3: Giảng viên
+>>>>>>> test
             if (user.vaiTroId == 1) {
-              nextScreen = const AdminHome();
-            } else if (user.vaiTroId == 2) {
+              nextScreen = const UserManagementScreen();
+            } else if (user.vaiTroId == 3) {
               nextScreen = const TeacherHome();
             } else {
               nextScreen = const StudentHome();
@@ -193,6 +213,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
+<<<<<<< HEAD
                   const SizedBox(height: 24),
 
                   // --- TOGGLE: Quản Trị | Giảng Viên | Sinh Viên ---
@@ -213,13 +234,25 @@ class _LoginScreenState extends State<LoginScreen> {
                   Text(
                     titleText,
                     style: const TextStyle(
+=======
+                  const SizedBox(height: 40),
+
+                  // --- Tiêu đề Form ---
+                  const Text(
+                    'Đăng nhập hệ thống',
+                    style: TextStyle(
+>>>>>>> test
                       fontSize: 22,
                       fontWeight: FontWeight.normal,
                       color: Color(0xFF212529),
                     ),
                     textAlign: TextAlign.center,
                   ),
+<<<<<<< HEAD
                   const SizedBox(height: 16),
+=======
+                  const SizedBox(height: 20),
+>>>>>>> test
 
                   // --- FORM ĐĂNG NHẬP ---
                   Container(
@@ -234,6 +267,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+<<<<<<< HEAD
                           _buildLabel(
                             'Tên đăng nhập:',
                             tooltipMessage: _selectedRole == 3
@@ -244,18 +278,29 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _usernameController,
                             decoration: _getInputDecoration(hintUsername),
+=======
+                          _buildLabel('Email trường / Tên đăng nhập:'),
+                          const SizedBox(height: 8.0),
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: _getInputDecoration('VD: mssv@caothang.edu.vn'),
+>>>>>>> test
                             validator: (value) => value!.trim().isEmpty
                                 ? 'Vui lòng nhập tên đăng nhập'
                                 : null,
                           ),
                           const SizedBox(height: 16.0),
 
+<<<<<<< HEAD
                           _buildLabel(
                             'Mật Khẩu:',
                             tooltipMessage: _selectedRole == 3
                                 ? 'Mật khẩu mặc định là CMND/CCCD'
                                 : null, // Chỉ hiện Tooltip cho Sinh viên
                           ),
+=======
+                          _buildLabel('Mật Khẩu:'),
+>>>>>>> test
                           const SizedBox(height: 8.0),
                           TextFormField(
                             controller: _passwordController,
@@ -265,13 +310,22 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? 'Vui lòng nhập mật khẩu'
                                 : null,
                           ),
+<<<<<<< HEAD
                           const SizedBox(height: 24.0),
+=======
+                          const SizedBox(height: 30.0),
+>>>>>>> test
 
                           // Nút đăng nhập
                           Center(
                             child: SizedBox(
+<<<<<<< HEAD
                               width: 150,
                               height: 40,
+=======
+                              width: double.infinity,
+                              height: 45,
+>>>>>>> test
                               child: ElevatedButton.icon(
                                 onPressed: isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
@@ -284,7 +338,11 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 icon: isLoading
                                     ? const SizedBox.shrink()
+<<<<<<< HEAD
                                     : const Icon(Icons.login, size: 18),
+=======
+                                    : const Icon(Icons.login, size: 20),
+>>>>>>> test
                                 label: isLoading
                                     ? const SizedBox(
                                         height: 20,
@@ -296,7 +354,14 @@ class _LoginScreenState extends State<LoginScreen> {
                                       )
                                     : const Text(
                                         'Đăng nhập',
+<<<<<<< HEAD
                                         style: TextStyle(fontSize: 15),
+=======
+                                        style: TextStyle(
+                                          fontSize: 16, 
+                                          fontWeight: FontWeight.bold
+                                        ),
+>>>>>>> test
                                       ),
                               ),
                             ),
@@ -305,6 +370,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // --- CÂU THÔNG BÁO DƯỚI NÚT ---
                           Center(
+<<<<<<< HEAD
                             child: Column(
                               children: [
                                 if (_selectedRole == 3) ...[
@@ -366,6 +432,29 @@ class _LoginScreenState extends State<LoginScreen> {
                                   ),
                                 ],
                               ],
+=======
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 13.5,
+                                ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Quên mật khẩu? Vui lòng liên hệ ',
+                                  ),
+                                  TextSpan(
+                                    text: 'P.CTCT-HSSV',
+                                    style: const TextStyle(
+                                      color: kCtBlue,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    recognizer: _ctctLinkRecognizer, 
+                                  ),
+                                ],
+                              ),
+>>>>>>> test
                             ),
                           ),
                         ],
@@ -393,6 +482,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+<<<<<<< HEAD
   // --- HÀM HELPER VẼ NÚT CHUYỂN TAB (TOGGLE) ---
   Widget _buildRoleToggle(int roleValue, IconData icon, String label) {
     bool isActive = _selectedRole == roleValue;
@@ -419,10 +509,21 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
           ],
         ),
+=======
+  // --- HÀM HELPER VẼ LABEL ---
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14.0, 
+        color: Colors.black87, 
+        fontWeight: FontWeight.w600
+>>>>>>> test
       ),
     );
   }
 
+<<<<<<< HEAD
   // --- HÀM HELPER VẼ DẤU GẠCH ĐỨNG ---
   Widget _buildSeparator() {
     return const Padding(
@@ -463,6 +564,8 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+=======
+>>>>>>> test
   // --- HÀM HELPER VẼ INPUT ---
   InputDecoration _getInputDecoration(String hint) {
     return InputDecoration(
@@ -471,8 +574,13 @@ class _LoginScreenState extends State<LoginScreen> {
       hintText: hint,
       hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
       contentPadding: const EdgeInsets.symmetric(
+<<<<<<< HEAD
         horizontal: 12.0,
         vertical: 12.0,
+=======
+        horizontal: 16.0,
+        vertical: 14.0,
+>>>>>>> test
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4.0),
