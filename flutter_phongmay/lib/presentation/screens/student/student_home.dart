@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
-import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart';
-
-const Color kAppBlue = Color(0xFF193D87);
+import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/screens/scanner/scan_action_screen.dart';
 
 class StudentHome extends StatefulWidget {
   const StudentHome({super.key});
@@ -13,264 +12,218 @@ class StudentHome extends StatefulWidget {
 }
 
 class _StudentHomeState extends State<StudentHome> {
-  int _selectedIndex = 0;
-  int _selectedDayIndex = 2;
-  final List<String> _days = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+  final Color primaryNavy = const Color(0xFF1D357A);
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<LoginViewModel>().currentUser;
-      if (user != null) {
-        context.read<ScheduleViewModel>().loadSchedule(
-          1,
-          lopHocId: user.lopHocId,
-        );
-      }
+      final vm = context.read<StudentDashboardViewModel>();
+      vm.loadAll(user?.id);
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final user = context.read<LoginViewModel>().currentUser;
-    final scheduleVM = context.watch<ScheduleViewModel>();
 
-    int thuCanTim = _selectedDayIndex + 2;
-    final todaySchedule = scheduleVM.weekSchedule
-        .where((item) => item.thu == thuCanTim)
-        .toList();
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        child: Column(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              color: const Color(0xFF0B132B),
-              child: Row(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Icon(
-                      Icons.person_outline,
-                      size: 30,
-                      color: Colors.black54,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Column(
+    return Consumer<StudentDashboardViewModel>(
+      builder: (context, vm, _) {
+        return Scaffold(
+          backgroundColor: const Color(0xFFF4F5F9),
+          appBar: AppBar(
+            title: Text('Xin chào, ${user?.hoTen ?? 'Sinh viên'}'),
+            backgroundColor: primaryNavy,
+            elevation: 0,
+            automaticallyImplyLeading: false,
+          ),
+          body: vm.loading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        user?.hoTen ?? 'Sinh viên',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                      // Stats row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _statCard('Lớp học phần', vm.coursesCount.toString()),
+                          _statCard(
+                            'Buổi sắp tới',
+                            vm.upcoming.length.toString(),
+                          ),
+                          _statCard(
+                            'Điểm danh',
+                            vm.recentAttendance.length.toString(),
+                          ),
+                          _statCard(
+                            'Sự cố mở',
+                            vm.recentIncidents.length.toString(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Upcoming
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Buổi học sắp tới',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (vm.upcoming.isEmpty)
+                                const Text('Không có lịch học sắp tới.'),
+                              ...vm.upcoming.map(
+                                (s) => ListTile(
+                                  title: Text(s.tenMon),
+                                  subtitle: Text(
+                                    '${s.ngayHoc} · ${s.tenPhong} · ${s.gioBatDau}-${s.gioKetThuc}',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'MSSV: ${user?.taiKhoan ?? "N/A"}',
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 14,
+                      const SizedBox(height: 12),
+
+                      // Recent attendance
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Điểm danh gần đây',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (vm.recentAttendance.isEmpty)
+                                const Text('Chưa có bản ghi điểm danh.'),
+                              ...vm.recentAttendance.map(
+                                (a) => ListTile(
+                                  title: Text(
+                                    (a.tenMon ?? a['ten_mon']) ?? 'Môn',
+                                  ),
+                                  subtitle: Text(
+                                    (a.ngay ?? a['ngay'] ?? '').toString(),
+                                  ),
+                                  trailing: Text(
+                                    a.ttDiemDanh ?? a['tt_diem_danh'] ?? '',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 12),
+                      // Recent incidents
+                      Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Sự cố gần đây',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              if (vm.recentIncidents.isEmpty)
+                                const Text('Chưa có báo cáo sự cố nào.'),
+                              ...vm.recentIncidents.map(
+                                (i) => ListTile(
+                                  title: Text((i.moTa ?? i['mo_ta']) ?? '—'),
+                                  subtitle: Text(
+                                    'Phòng: ${(i.mayTinhId ?? i['may_tinh_id'])?.toString() ?? '-'}',
+                                  ),
+                                  trailing: Text(
+                                    (i.trangThai ?? i['trang_thai']) ?? '',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              color: Colors.grey[100],
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: List.generate(_days.length, (index) {
-                    bool isSelected = _selectedDayIndex == index;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedDayIndex = index),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? const Color(0xFF0B132B)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(4),
-                          border: isSelected
-                              ? null
-                              : Border.all(color: Colors.grey.shade300),
-                        ),
-                        child: Text(
-                          _days[index],
-                          style: TextStyle(
-                            color: isSelected ? Colors.white : Colors.black87,
-                            fontWeight: isSelected
-                                ? FontWeight.bold
-                                : FontWeight.normal,
-                          ),
-                        ),
-                      ),
-                    );
-                  }),
                 ),
+          floatingActionButton: SizedBox(
+            width: 65,
+            height: 65,
+            child: FloatingActionButton(
+              backgroundColor: primaryNavy,
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+              onPressed: () async {
+                final navigator = Navigator.of(context);
+                final String? qrResult =
+                    await navigator.pushNamed('/scanner') as String?;
+                if (qrResult != null && qrResult.isNotEmpty) {
+                  if (!mounted) return;
+                  navigator.push(
+                    MaterialPageRoute(
+                      builder: (context) => ScanActionScreen(qrData: qrResult),
+                    ),
+                  );
+                }
+              },
+              child: const Icon(
+                Icons.qr_code_scanner,
+                size: 30,
+                color: Colors.white,
               ),
             ),
-
-            Expanded(
-              child: scheduleVM.isLoading
-                  ? const Center(child: CircularProgressIndicator())
-                  : todaySchedule.isEmpty
-                  ? const Center(
-                      child: Text(
-                        'Hôm nay bạn không có lịch thực hành.',
-                        style: TextStyle(fontSize: 16, color: Colors.black54),
-                      ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: todaySchedule.length,
-                      itemBuilder: (context, index) {
-                        final item = todaySchedule[index];
-                        return _buildStudentClassCard(
-                          title: item.tenMon,
-                          room: 'Phòng ${item.tenPhong}',
-                          time: '${item.gioBatDau} - ${item.gioKetThuc}',
-                          instructor: item.tenGiangVien,
-                          pcStatus: 'Sẵn sàng',
-                          statusColor: Colors.green,
-                          statusBg: Colors.green.shade50,
-                        );
-                      },
-                    ),
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) => setState(() => _selectedIndex = index),
-        selectedItemColor: kAppBlue,
-        unselectedItemColor: Colors.grey,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Trang chủ',
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.inventory_2_outlined),
-            activeIcon: Icon(Icons.inventory_2),
-            label: 'Thiết bị',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Cá nhân',
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStudentClassCard({
-    required String title,
-    required String room,
-    required String time,
-    required String instructor,
-    required String pcStatus,
-    required Color statusColor,
-    required Color statusBg,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: Colors.grey.shade300),
-      ),
-      elevation: 0,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+  Widget _statCard(String label, String value) {
+    return Expanded(
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
               ),
-            ),
-            const SizedBox(height: 12),
-            _buildInfoRow('Phòng:', room),
-            _buildInfoRow('Thời gian:', time),
-            _buildInfoRow('Giảng viên:', instructor),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                const SizedBox(
-                  width: 100,
-                  child: Text(
-                    'Tình trạng PC:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+              const SizedBox(height: 8),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusBg,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    pcStatus,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              label,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
+              ),
+            ],
           ),
-          Text(value, style: const TextStyle(color: Colors.black54)),
-        ],
+        ),
       ),
     );
   }

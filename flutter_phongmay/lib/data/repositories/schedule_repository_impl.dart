@@ -46,7 +46,19 @@ class ScheduleRepositoryImpl implements ScheduleRepository {
     String ngayYeuCau,
     int nguoiDungId,
     int phongMayId,
+    String maCa,
+    int tietBatDau,
+    int tietKetThuc,
+    String mucDich,
   ) async {
-    return await scheduleService.bookRoom(ngayYeuCau, nguoiDungId, phongMayId);
+    return await scheduleService.bookRoom(
+      ngayYeuCau,
+      nguoiDungId,
+      phongMayId,
+      maCa,
+      tietBatDau,
+      tietKetThuc,
+      mucDich,
+    );
   }
 }
