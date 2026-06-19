@@ -28,15 +28,28 @@ class ScheduleViewModel extends ChangeNotifier {
   }
 
   // Gửi yêu cầu mượn phòng
+  // Gửi yêu cầu mượn phòng
   Future<bool> submitRoomBooking(
     String ngayYeuCau,
     int nguoiDungId,
     int phongMayId,
+    String maCa,
+    int tietBatDau,
+    int tietKetThuc,
+    String mucDich,
   ) async {
     isLoading = true;
     notifyListeners();
 
-    bool success = await _service.bookRoom(ngayYeuCau, nguoiDungId, phongMayId);
+    bool success = await _service.bookRoom(
+      ngayYeuCau,
+      nguoiDungId,
+      phongMayId,
+      maCa,
+      tietBatDau,
+      tietKetThuc,
+      mucDich,
+    );
 
     isLoading = false;
     notifyListeners();

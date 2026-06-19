@@ -197,12 +197,27 @@ class _StudentHomeScreenState extends State<StudentHomeScreen> {
                                 final dateStr = picked.toIso8601String().split(
                                   'T',
                                 )[0];
+                                
+                                // FIX: Thêm 4 tham số mới và xử lý giá trị mặc định an toàn
+                                final maCa = item['ma_ca']?.toString() ?? 'Sáng';
+                                final tietBatDau = int.tryParse(item['tiet_bat_dau']?.toString() ?? '1') ?? 1;
+                                final tietKetThuc = int.tryParse(item['tiet_ket_thuc']?.toString() ?? '3') ?? 3;
+                                final mucDich = 'Mượn phòng thực hành tự do môn ${item['ten_mon'] ?? ''}';
+
                                 final success = await scheduleVM
                                     .submitRoomBooking(
                                       dateStr,
                                       user.id,
                                       roomId,
+                                      maCa,
+                                      tietBatDau,
+                                      tietKetThuc,
+                                      mucDich,
                                     );
+                                
+                                // FIX: Kiểm tra mounted trước khi gọi ScaffoldMessenger
+                                if (!mounted) return;
+                                
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
                                     content: Text(

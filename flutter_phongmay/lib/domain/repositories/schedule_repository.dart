@@ -7,5 +7,13 @@ abstract class ScheduleRepository {
     int? nguoiDungId,
   });
 
-  Future<bool> bookRoom(String ngayYeuCau, int nguoiDungId, int phongMayId);
+  Future<bool> bookRoom(
+    String ngayYeuCau, 
+    int nguoiDungId, 
+    int phongMayId,
+    String maCa,
+    int tietBatDau,
+    int tietKetThuc,
+    String mucDich,
+  );
 }
