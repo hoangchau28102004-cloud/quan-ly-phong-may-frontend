@@ -24,7 +24,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       final user = context.read<LoginViewModel>().currentUser;
       if (user != null) {
         final scheduleVM = context.read<ScheduleViewModel>();
-        if (user.vaiTroId == 3) {
+
+        if (user.vaiTroId == 2) {
           scheduleVM.loadSchedule(1, lopHocId: user.lopHocId);
         } else {
           scheduleVM.loadSchedule(1, nguoiDungId: user.id);
@@ -170,6 +171,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                   } else if (value == 'book') {
                                     final scheduleVM = context
                                         .read<ScheduleViewModel>();
+
                                     if (user == null) {
                                       ScaffoldMessenger.of(
                                         context,
@@ -196,17 +198,42 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                                       return;
                                     }
 
+                                    final picked = await showDatePicker(
+                                      context: context,
+                                      initialDate: DateTime.now(),
+                                      firstDate: DateTime.now().subtract(
+                                        const Duration(days: 365),
+                                      ),
+                                      lastDate: DateTime.now().add(
+                                        const Duration(days: 365),
+                                      ),
+                                    );
+                                    if (picked == null) return;
+
+                                    final dateStr = picked
+                                        .toIso8601String()
+                                        .split('T')[0];
+
+                                    // FIX: Thêm 4 tham số mới. Sử dụng dữ liệu giả lập cho Ca và Tiết do Entity Schedule chưa hỗ trợ.
                                     final success = await scheduleVM
                                         .submitRoomBooking(
-                                          item.ngayHoc,
+                                          dateStr,
                                           user.id,
                                           item.phongMayId!,
+                                          'Sáng', // Fallback Ca
+                                          1, // Tiết Bắt Đầu mặc định
+                                          3, // Tiết Kết Thúc mặc định
+                                          'Mượn phòng thực hành ${item.tenMon}', // Mục đích
                                         );
+
+                                    // FIX: Kiểm tra mounted
+                                    if (!mounted) return;
+
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
                                         content: Text(
                                           success
-                                              ? 'Yêu cầu mượn phòng được gửi'
+                                              ? 'Yêu cầu mượn phòng gửi thành công'
                                               : 'Gửi yêu cầu thất bại',
                                         ),
                                       ),

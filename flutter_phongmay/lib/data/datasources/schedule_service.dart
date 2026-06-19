@@ -31,14 +31,24 @@ class ScheduleService {
     String ngayYeuCau,
     int nguoiDungId,
     int phongMayId,
+    String maCa,
+    int tietBatDau,
+    int tietKetThuc,
+    String mucDich,
   ) async {
     try {
       final response = await ApiService.post('/schedule/book', {
         'ngay_yeu_cau': ngayYeuCau,
-        'nguoi_dung_id': nguoiDungId,
-        'phong_may_id': phongMayId,
+        'ma_nguoi_dung': nguoiDungId,
+        'ma_phong': phongMayId,
+        'ma_ca': maCa,
+        'tiet_bat_dau': tietBatDau,
+        'tiet_ket_thuc': tietKetThuc,
+        'muc_dich': mucDich,
       });
-      return response.statusCode == 201; // HTTP 201 Created
+      // Kiểm tra API trả về có success = true không
+      final data = ApiService.decodeBody(response);
+      return (response.statusCode == 201 || response.statusCode == 200) && data?['success'] == true;
     } catch (e) {
       return false;
     }
