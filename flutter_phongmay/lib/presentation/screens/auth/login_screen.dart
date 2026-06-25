@@ -6,7 +6,7 @@ import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
 // Import 3 màn hình của 3 vai trò
 import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
 
 // Các mã màu lấy từ thiết kế CTTC

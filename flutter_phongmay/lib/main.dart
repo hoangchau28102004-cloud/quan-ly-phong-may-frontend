@@ -21,7 +21,7 @@ import 'package:flutter_phongmay/presentation/screens/admin/academic_management.
 import 'package:flutter_phongmay/presentation/screens/admin/asset_lab_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/incident_maintenance_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/scheduling_management.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
 
@@ -53,7 +53,7 @@ void main() async {
           create: (_) => UserViewModel(repository: UserRepositoryImpl()),
         ),
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
-        
+
         // ---> ĐÃ ĐĂNG KÝ IMPORT_VIEWMODEL VÀO ĐÂY <---
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
       ],
@@ -88,7 +88,7 @@ class MyApp extends StatelessWidget {
         '/admin/scheduling': (context) => const SchedulingManagementScreen(),
         '/lecturer_home': (context) => const TeacherHome(),
         '/scanner': (context) => const QRScannerScreen(),
-        
+
         // ---> ĐÃ THÊM ROUTE PHIẾU NHẬP MÁY VÀO ĐÂY <---
         '/admin/import-machine': (context) => const ImportMachineScreen(),
       },
