@@ -26,9 +26,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         final scheduleVM = context.read<ScheduleViewModel>();
 
         if (user.vaiTroId == 2) {
-          scheduleVM.loadSchedule(1, lopHocId: user.lopHocId);
+          // SỬA: Thêm "tuanHoc:" vào trước số 1
+          scheduleVM.loadSchedule(tuanHoc: 1, lopHocId: user.lopHocId);
         } else {
-          scheduleVM.loadSchedule(1, nguoiDungId: user.id);
+          // SỬA: Thêm "tuanHoc:" vào trước số 1
+          scheduleVM.loadSchedule(tuanHoc: 1, nguoiDungId: user.id);
         }
       }
     });

@@ -4,6 +4,7 @@ import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/room_booking_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_profile_screen.dart';
+import 'package:intl/intl.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -28,13 +29,16 @@ class _TeacherHomeState extends State<TeacherHome> {
     'CN',
   ];
 
-  @override
+@override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = context.read<LoginViewModel>().currentUser;
       if (user != null) {
-        context.read<ScheduleViewModel>().loadSchedule(1, nguoiDungId: user.id);
+        context.read<ScheduleViewModel>().loadSchedule(
+          nguoiDungId: user.id,
+          currentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()), // Tự động lấy ngày hôm nay
+        );
       }
     });
   }

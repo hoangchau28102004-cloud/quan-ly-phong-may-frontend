@@ -16,13 +16,13 @@ class RoomBookingScreen extends StatefulWidget {
 
 class _RoomBookingScreenState extends State<RoomBookingScreen> {
   DateTime _selectedDate = DateTime.now();
-  int _tietBatDau = 1;
-  int _tietKetThuc = 3;
+
+  // Để null mặc định để Dropdown ban đầu trống
+  int? _tietBatDau;
+  int? _tietKetThuc;
 
   List<Map<String, dynamic>> _rooms = [];
   bool _isLoadingRooms = true;
-
-  final List<int> _tietList = List.generate(12, (index) => index + 1);
 
   @override
   void initState() {
@@ -35,9 +35,13 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     setState(() => _isLoadingRooms = true);
     try {
       final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-      // Gọi API mới viết ở Backend
+
+      // SỬA: Xử lý an toàn khi _tietBatDau hoặc _tietKetThuc là null
+      final startParam = _tietBatDau != null ? '$_tietBatDau' : '';
+      final endParam = _tietKetThuc != null ? '$_tietKetThuc' : '';
+
       final res = await ApiService.get(
-        '/phong-may/available?date=$formattedDate&start=$_tietBatDau&end=$_tietKetThuc',
+        '/phong-may/available?date=$formattedDate&start=$startParam&end=$endParam',
       );
 
       if (res.statusCode == 200) {
@@ -77,7 +81,18 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
   }
 
   void _showBookingDialog(Map<String, dynamic> room) {
-    if (_tietBatDau > _tietKetThuc) {
+    // SỬA: Bắt lỗi nếu người dùng chưa chọn tiết mà đã bấm đăng ký
+    if (_tietBatDau == null || _tietKetThuc == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Vui lòng chọn đầy đủ tiết bắt đầu và tiết kết thúc!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    if (_tietBatDau! > _tietKetThuc!) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Tiết bắt đầu không được lớn hơn tiết kết thúc!'),
@@ -161,15 +176,15 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final user = context.read<LoginViewModel>().currentUser;
 
-    if (user != null) {
-      String caHoc = _getCaHoc(_tietBatDau);
+    if (user != null && _tietBatDau != null && _tietKetThuc != null) {
+      String caHoc = _getCaHoc(_tietBatDau!);
       bool success = await context.read<ScheduleViewModel>().submitRoomBooking(
         formattedDate,
         user.id,
         roomId,
         caHoc,
-        _tietBatDau,
-        _tietKetThuc,
+        _tietBatDau!,
+        _tietKetThuc!,
         mucDich,
       );
 
@@ -181,7 +196,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
               backgroundColor: Colors.green,
             ),
           );
-          _fetchAvailableRooms(); // Tải lại phòng sau khi đăng ký thành công (để phòng đó chuyển sang Đã sử dụng)
+          _fetchAvailableRooms(); // Tải lại phòng sau khi đăng ký thành công
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -276,10 +291,48 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      _buildTietDropdown(_tietBatDau, (val) {
-                        setState(() => _tietBatDau = val!);
-                        _fetchAvailableRooms(); // Tải lại danh sách
-                      }),
+                      // SỬA: DROPDOWN TIẾT BẮT ĐẦU CHẠY ĐỘNG
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Chọn',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        value: _tietBatDau,
+                        items: List.generate(
+                          12,
+                          (i) => DropdownMenuItem(
+                            value: i + 1,
+                            child: Text(
+                              'Tiết ${i + 1}',
+                              style: const TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                        onChanged: (val) {
+                          setState(() {
+                            _tietBatDau = val;
+                            // Reset Tiết kết thúc nếu nó nhỏ hơn Tiết bắt đầu mới
+                            if (_tietKetThuc != null &&
+                                _tietKetThuc! < _tietBatDau!) {
+                              _tietKetThuc = null;
+                            }
+                          });
+                          _fetchAvailableRooms();
+                        },
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                      ),
                     ],
                   ),
                 ),
@@ -298,10 +351,53 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         ),
                       ),
                       const SizedBox(height: 6),
-                      _buildTietDropdown(_tietKetThuc, (val) {
-                        setState(() => _tietKetThuc = val!);
-                        _fetchAvailableRooms(); // Tải lại danh sách
-                      }),
+                      // SỬA: DROPDOWN TIẾT KẾT THÚC CHẠY ĐỘNG DỰA VÀO TIẾT BẮT ĐẦU
+                      DropdownButtonFormField<int>(
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Chọn',
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 8,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(6),
+                            borderSide: BorderSide(color: Colors.grey.shade300),
+                          ),
+                        ),
+                        value: _tietKetThuc,
+                        disabledHint: const Text(
+                          'Chọn',
+                          style: TextStyle(fontSize: 13, color: Colors.grey),
+                        ),
+                        // Nếu chưa chọn tiết bắt đầu -> null -> Dropdown bị disable
+                        items: _tietBatDau == null
+                            ? null
+                            : List.generate(
+                                13 - _tietBatDau!, // Chỉ sinh từ tiết BĐ đến 12
+                                (i) {
+                                  int tiet = _tietBatDau! + i;
+                                  return DropdownMenuItem(
+                                    value: tiet,
+                                    child: Text(
+                                      'Tiết $tiet',
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  );
+                                },
+                              ),
+                        onChanged: _tietBatDau == null
+                            ? null
+                            : (val) {
+                                setState(() => _tietKetThuc = val);
+                                _fetchAvailableRooms();
+                              },
+                        icon: const Icon(Icons.keyboard_arrow_down, size: 18),
+                      ),
                     ],
                   ),
                 ),
@@ -314,7 +410,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                'Danh sách phòng ngày ${DateFormat('dd/MM/yyyy').format(_selectedDate)}, tiết $_tietBatDau-$_tietKetThuc',
+                'Danh sách phòng ngày ${DateFormat('dd/MM/yyyy').format(_selectedDate)}, tiết ${_tietBatDau ?? "?"}-${_tietKetThuc ?? "?"}',
                 style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
@@ -341,34 +437,6 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildTietDropdown(int value, ValueChanged<int?> onChanged) {
-    return DropdownButtonFormField<int>(
-      isExpanded: true,
-      decoration: InputDecoration(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(6),
-          borderSide: BorderSide(color: Colors.grey.shade300),
-        ),
-      ),
-      value: value,
-      items: _tietList
-          .map(
-            (t) => DropdownMenuItem(
-              value: t,
-              child: Text('Tiết $t', style: const TextStyle(fontSize: 13)),
-            ),
-          )
-          .toList(),
-      onChanged: onChanged,
-      icon: const Icon(Icons.keyboard_arrow_down, size: 18),
     );
   }
 

@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
-import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -17,8 +16,6 @@ class BookingHistoryScreen extends StatefulWidget {
 class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
   bool _isLoading = true;
   List<dynamic> _history = [];
-  List<Map<String, dynamic>> _rooms =
-      []; // Chứa danh sách phòng để dùng khi Edit
 
   @override
   void initState() {
@@ -31,24 +28,14 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     final user = context.read<LoginViewModel>().currentUser;
     if (user != null) {
       try {
-        // 1. Lấy danh sách phòng máy (để phòng hờ khi giảng viên muốn bấm sửa)
-        final resRoom = await ApiService.get('/phong-may');
-        if (resRoom.statusCode == 200) {
-          final bodyRoom = ApiService.decodeBody(resRoom);
-          if (bodyRoom != null && bodyRoom['success'] == true) {
-            _rooms = List<Map<String, dynamic>>.from(bodyRoom['data'] ?? []);
-          }
-        }
-
-        // 2. Lấy lịch sử mượn phòng của giảng viên này (Giả sử bạn đã viết API này trong Backend)
-        // Thay URL này bằng URL API lấy danh sách đặt phòng theo ma_giang_vien của bạn
         final resHistory = await ApiService.get(
-          '/dat-phong?nguoi_dung_id=${user.id}',
+          '/schedule?nguoi_dung_id=${user.id}',
         );
         if (resHistory.statusCode == 200) {
           final bodyHistory = ApiService.decodeBody(resHistory);
           if (bodyHistory != null && bodyHistory['success'] == true) {
-            _history = bodyHistory['data'] ?? [];
+            // Gán thẳng danh sách vào _history, load tất cả!
+            _history = List<dynamic>.from(bodyHistory['data'] ?? []);
           }
         }
       } catch (e) {
@@ -58,14 +45,52 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     if (mounted) setState(() => _isLoading = false);
   }
 
-  // Hàm gọi API Cập nhật phiếu
-  Future<void> _updateBooking(int bookingId, Map<String, dynamic> data) async {
-    // Gọi API PUT/PATCH để cập nhật
-    final res = await ApiService.put('/dat-phong/$bookingId', data);
+  // --- HÀM XÁC NHẬN HỦY ---
+  void _confirmDelete(int id) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Xác nhận hủy',
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Bạn có chắc chắn muốn hủy bỏ yêu cầu mượn phòng này không? Hành động này không thể hoàn tác.',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Không', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              _deleteBooking(id); // Gọi hàm xóa
+            },
+            child: const Text(
+              'Hủy yêu cầu',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- HÀM GỌI API HỦY XUỐNG BACKEND ---
+  Future<void> _deleteBooking(int id) async {
+    final res = await ApiService.delete('/schedule/$id');
     if (res.statusCode == 200) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cập nhật yêu cầu thành công!'),
+          content: Text('Đã hủy yêu cầu thành công!'),
           backgroundColor: Colors.green,
         ),
       );
@@ -73,7 +98,7 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Cập nhật thất bại. Vui lòng thử lại.'),
+          content: Text('Không thể hủy yêu cầu này.'),
           backgroundColor: Colors.red,
         ),
       );
@@ -87,18 +112,31 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
       appBar: AppBar(
         title: const Text(
           'Lịch Sử Mượn Phòng',
-          style: TextStyle(color: Colors.white),
+          style: TextStyle(color: Colors.white, fontSize: 18),
         ),
         backgroundColor: kAppBlue,
         iconTheme: const IconThemeData(color: Colors.white),
+        elevation: 0,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: kAppBlue))
           : _history.isEmpty
-          ? const Center(
-              child: Text(
-                'Bạn chưa có lịch sử mượn phòng nào.',
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.history_toggle_off,
+                    size: 80,
+                    color: Colors.grey.shade300,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Bạn chưa có lịch sử mượn phòng nào\nhoặc các lịch cũ đã được ẩn đi.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 15, color: Colors.grey),
+                  ),
+                ],
               ),
             )
           : ListView.builder(
@@ -188,20 +226,30 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
               item['muc_dich'] ?? 'Không có',
             ),
 
-            // CHỈ HIỂN THỊ NÚT SỬA KHI TRẠNG THÁI LÀ PENDING
+            // CHỈ HIỂN THỊ NÚT HỦY KHI TRẠNG THÁI LÀ PENDING
             if (status == 'pending') ...[
               const SizedBox(height: 16),
               SizedBox(
                 width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () => _showEditBottomSheet(item),
-                  icon: const Icon(Icons.edit, size: 18, color: kAppBlue),
-                  label: const Text(
-                    'Sửa yêu cầu',
-                    style: TextStyle(color: kAppBlue),
+                height: 45,
+                child: ElevatedButton.icon(
+                  onPressed: () => _confirmDelete(item['id']),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    size: 20,
+                    color: Colors.white,
                   ),
-                  style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: kAppBlue),
+                  label: const Text(
+                    'Hủy yêu cầu mượn phòng',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red.shade400,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -238,255 +286,6 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  // --- BOTTOM SHEET ĐỂ SỬA YÊU CẦU ---
-  void _showEditBottomSheet(dynamic item) {
-    // Khởi tạo các giá trị ban đầu dựa trên phiếu cũ
-    DateTime? editDate = item['ngay_dat'] != null
-        ? DateTime.parse(item['ngay_dat'])
-        : DateTime.now();
-    int? editRoomId = item['ma_phong'];
-    String editCa = item['ma_ca'] ?? 'Sáng';
-    int editTietBatDau = item['tiet_bat_dau'] ?? 1;
-    int editTietKetThuc = item['tiet_ket_thuc'] ?? 3;
-    TextEditingController editMucDichCtrl = TextEditingController(
-      text: item['muc_dich'],
-    );
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return StatefulBuilder(
-          builder: (BuildContext context, StateSetter setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                bottom: MediaQuery.of(
-                  context,
-                ).viewInsets.bottom, // Đẩy UI lên khi hiện bàn phím
-                left: 24,
-                right: 24,
-                top: 24,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Sửa Yêu Cầu Mượn Phòng',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: kAppBlue,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Sửa Ngày
-                    InkWell(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: editDate!,
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 30),
-                          ),
-                        );
-                        if (picked != null)
-                          setModalState(() => editDate = picked);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: Colors.grey.shade400),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(DateFormat('dd/MM/yyyy').format(editDate!)),
-                            const Icon(Icons.calendar_today, size: 18),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Sửa Phòng
-                    DropdownButtonFormField<int>(
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      value: editRoomId,
-                      items: _rooms
-                          .map(
-                            (r) => DropdownMenuItem<int>(
-                              value: r['id'],
-                              child: Text(r['ten_phong'].toString()),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) => setModalState(() => editRoomId = val),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Sửa Ca và Tiết
-                    Row(
-                      children: [
-                        Expanded(
-                          child: DropdownButtonFormField<String>(
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            value: editCa,
-                            items: ['Sáng', 'Chiều', 'Tối']
-                                .map(
-                                  (c) => DropdownMenuItem(
-                                    value: c,
-                                    child: Text(c),
-                                  ),
-                                )
-                                .toList(),
-                            onChanged: (val) =>
-                                setModalState(() => editCa = val!),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            value: editTietBatDau,
-                            items: List.generate(
-                              12,
-                              (i) => DropdownMenuItem(
-                                value: i + 1,
-                                child: Text('T${i + 1}'),
-                              ),
-                            ),
-                            onChanged: (val) =>
-                                setModalState(() => editTietBatDau = val!),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: DropdownButtonFormField<int>(
-                            decoration: InputDecoration(
-                              contentPadding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                            ),
-                            value: editTietKetThuc,
-                            items: List.generate(
-                              12,
-                              (i) => DropdownMenuItem(
-                                value: i + 1,
-                                child: Text('T${i + 1}'),
-                              ),
-                            ),
-                            onChanged: (val) =>
-                                setModalState(() => editTietKetThuc = val!),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Sửa Mục đích
-                    TextField(
-                      controller: editMucDichCtrl,
-                      decoration: InputDecoration(
-                        hintText: 'Mục đích mượn',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    // Nút Lưu Cập Nhật
-                    SizedBox(
-                      width: double.infinity,
-                      height: 45,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kAppBlue,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        onPressed: () {
-                          if (editTietBatDau > editTietKetThuc) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Tiết bắt đầu không được lớn hơn tiết kết thúc',
-                                ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                            return;
-                          }
-                          Navigator.pop(context); // Đóng BottomSheet
-                          // Gọi hàm update
-                          _updateBooking(item['id'], {
-                            'ngay_dat': DateFormat(
-                              'yyyy-MM-dd',
-                            ).format(editDate!),
-                            'ma_phong': editRoomId,
-                            'ma_ca': editCa,
-                            'tiet_bat_dau': editTietBatDau,
-                            'tiet_ket_thuc': editTietKetThuc,
-                            'muc_dich': editMucDichCtrl.text,
-                          });
-                        },
-                        child: const Text(
-                          'Lưu thay đổi',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

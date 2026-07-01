@@ -1,12 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'; // THÊM IMPORT NÀY
 import 'package:flutter_phongmay/presentation/screens/lecturer/booking_history_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/report_issue_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
-class TeacherProfileScreen extends StatelessWidget {
+// CHUYỂN TỪ STATELESS SANG STATEFUL WIDGET
+class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
+
+  @override
+  State<TeacherProfileScreen> createState() => _TeacherProfileScreenState();
+}
+
+class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
+  
+  @override
+  void initState() {
+    super.initState();
+    // Tự động gọi lấy lịch sử mượn phòng để đếm số lượng khi vào Profile
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = context.read<LoginViewModel>().currentUser;
+      if (user != null) {
+        context.read<ScheduleViewModel>().fetchBookingHistory(user.id);
+      }
+    });
+  }
 
   void _handleLogout(BuildContext context) {
     // Xóa stack hiện tại và chuyển hẳn về trang Login
@@ -16,6 +37,8 @@ class TeacherProfileScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<LoginViewModel>().currentUser;
+    // LẮNG NGHE SỰ THAY ĐỔI DỮ LIỆU TỪ VIEWMODEL
+    final scheduleVM = context.watch<ScheduleViewModel>(); 
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F9),
@@ -106,13 +129,16 @@ class TeacherProfileScreen extends StatelessWidget {
               badges: [
                 _buildBadge(
                   'Chờ duyệt',
-                  '2',
+                  '${scheduleVM.pendingCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
                   Colors.orange,
-                ), // Bạn có thể lấy số liệu thật từ API sau
-                _buildBadge('Đã duyệt', '5', Colors.green),
+                ), 
+                _buildBadge(
+                  'Đã duyệt', 
+                  '${scheduleVM.approvedCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
+                  Colors.green
+                ),
               ],
               onTap: () {
-                // SỬA Ở ĐÂY: Chuyển sang trang Lịch sử
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -123,8 +149,13 @@ class TeacherProfileScreen extends StatelessWidget {
             ),
             _buildMenuItem(
               icon: Icons.warning_amber_rounded,
-              title: 'Báo cáo sự cố của tôi',
-              onTap: () {},
+              title: 'Báo cáo sự cố',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const ReportIssueScreen()),
+                );
+              },
             ),
             _buildMenuItem(
               icon: Icons.settings_outlined,

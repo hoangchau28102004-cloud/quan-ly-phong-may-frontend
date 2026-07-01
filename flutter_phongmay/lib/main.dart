@@ -9,6 +9,7 @@ import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'
 import 'package:flutter_phongmay/presentation/providers/user_viewmodel.dart';
 import 'package:flutter_phongmay/data/repositories/user_repository_impl.dart';
 import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/providers/issue_viewmodel.dart';
 // ---> ĐÃ THÊM IMPORT CHO IMPORT_VIEWMODEL Ở ĐÂY <---
 import 'package:flutter_phongmay/presentation/providers/import_viewmodel.dart';
 
@@ -53,9 +54,8 @@ void main() async {
           create: (_) => UserViewModel(repository: UserRepositoryImpl()),
         ),
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
-
-        // ---> ĐÃ ĐĂNG KÝ IMPORT_VIEWMODEL VÀO ĐÂY <---
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
+        ChangeNotifierProvider(create: (_) => IssueViewModel()),
       ],
       child: const MyApp(),
     ),
