@@ -154,7 +154,7 @@ class _StudentHomeState extends State<StudentHome> {
                                 (i) => ListTile(
                                   title: Text((i.moTa ?? i['mo_ta']) ?? '—'),
                                   subtitle: Text(
-                                    'Phòng: ${(i.mayTinhId ?? i['may_tinh_id'])?.toString() ?? '-'}',
+                                    'Phòng: ${(i.mayTinhId ?? i['ma_may_tinh'] ?? i['may_tinh_id'])?.toString() ?? '-'}',
                                   ),
                                   trailing: Text(
                                     (i.trangThai ?? i['trang_thai']) ?? '',

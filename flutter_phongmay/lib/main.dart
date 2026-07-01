@@ -21,9 +21,10 @@ import 'package:flutter_phongmay/presentation/screens/admin/academic_management.
 import 'package:flutter_phongmay/presentation/screens/admin/asset_lab_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/incident_maintenance_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/scheduling_management.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
 import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/transfer_machine_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/borrow_return_management_screen.dart';
 
 void main() async {
   // 1. Thêm 'async'
@@ -53,8 +54,6 @@ void main() async {
           create: (_) => UserViewModel(repository: UserRepositoryImpl()),
         ),
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
-        
-        // ---> ĐÃ ĐĂNG KÝ IMPORT_VIEWMODEL VÀO ĐÂY <---
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
       ],
       child: const MyApp(),
@@ -79,18 +78,18 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/main': (context) => const MainLayout(),
         '/admin_rooms': (context) => const AdminRoomsScreen(),
-        // Redirect legacy '/admin' route to user management (accounts)
         '/admin': (context) => const UserManagementScreen(),
         '/admin/users': (context) => const UserManagementScreen(),
         '/admin/academic': (context) => const AcademicManagementScreen(),
         '/admin/assets': (context) => const AssetLabManagementScreen(),
-        '/admin/incidents': (context) => const IncidentMaintenanceScreen(),
+        '/admin/incidents': (context) => const IncidentMaintenanceManagementScreen(),
         '/admin/scheduling': (context) => const SchedulingManagementScreen(),
-        '/lecturer_home': (context) => const TeacherHome(),
+        '/lecturer_home': (context) => const LecturerHomeScreen(),
         '/scanner': (context) => const QRScannerScreen(),
-        
-        // ---> ĐÃ THÊM ROUTE PHIẾU NHẬP MÁY VÀO ĐÂY <---
         '/admin/import-machine': (context) => const ImportMachineScreen(),
+        '/admin/transfer': (context) => const TransferMachineScreen(),
+        '/admin/borrow-return': (context) => const BorrowReturnManagementScreen(),
+        '/admin/scan-qr': (context) => const AdminRoomsScreen(),
       },
     );
   }

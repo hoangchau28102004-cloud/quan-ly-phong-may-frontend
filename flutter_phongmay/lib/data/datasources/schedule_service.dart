@@ -10,9 +10,7 @@ class ScheduleService {
   }) async {
     try {
       final response = await ApiService.get(
-        '/schedule/list?tuan_hoc=$tuanHoc' +
-            (lopHocId != null ? '&lop_hoc_id=$lopHocId' : '') +
-            (nguoiDungId != null ? '&nguoi_dung_id=$nguoiDungId' : ''),
+        '/schedule/list?tuan_hoc=$tuanHoc${lopHocId != null ? '&lop_hoc_id=$lopHocId' : ''}${nguoiDungId != null ? '&nguoi_dung_id=$nguoiDungId' : ''}',
       );
       if (response.statusCode == 200) {
         final data = ApiService.decodeBody(response);

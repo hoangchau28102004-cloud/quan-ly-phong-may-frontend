@@ -6,7 +6,7 @@ import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
 // Import 3 màn hình của 3 vai trò
 import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
 
 // Các mã màu lấy từ thiết kế CTTC
@@ -27,29 +27,21 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // 1: Admin, 2: Giảng viên, 3: Sinh viên (Mặc định chọn Sinh viên)
-  int _selectedRole = 3;
-
   // Bộ nhận diện cử chỉ cho các đường link
   late TapGestureRecognizer _ctctLinkRecognizer;
-  late TapGestureRecognizer _lecturerLinkRecognizer;
 
   @override
   void initState() {
     super.initState();
     // Khởi tạo sự kiện bấm vào link
     _ctctLinkRecognizer = TapGestureRecognizer()..onTap = _launchCTCTUrl;
-    _lecturerLinkRecognizer = TapGestureRecognizer()
-      ..onTap = _forgotPasswordLecturer;
   }
 
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    // Giải phóng bộ nhớ của recognizer
     _ctctLinkRecognizer.dispose();
-    _lecturerLinkRecognizer.dispose();
     super.dispose();
   }
 
@@ -63,15 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     }
-  }
-
-  // Hàm xử lý khi giảng viên / admin quên mật khẩu
-  void _forgotPasswordLecturer() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Chức năng khôi phục mật khẩu đang phát triển.'),
-      ),
-    );
   }
 
   void _login() async {
@@ -88,26 +71,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Widget nextScreen;
 
           if (user != null) {
-            // --- LOGIC CHẶN ĐĂNG NHẬP SAI TAB CHO 3 VAI TRÒ ---
-            if (_selectedRole != user.vaiTroId) {
-              String roleName = _selectedRole == 1 
-                  ? 'Quản trị viên' 
-                  : (_selectedRole == 2 ? 'Giảng viên' : 'Sinh viên');
-                  
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Tài khoản này không phải $roleName. Vui lòng chọn đúng mục!'),
-                  backgroundColor: kCtRed,
-                ),
-              );
-              return; // Dừng lại, không cho chuyển trang
-            }
-            // -------------------------------------------------
-
-            // Phân luồng chuyển trang
+            // TỰ ĐỘNG PHÂN LUỒNG: Hệ thống lấy thẳng vaiTroId từ CSDL để chuyển trang
+            // 1: Admin, 2: Sinh viên, 3: Giảng viên
             if (user.vaiTroId == 1) {
               nextScreen = const UserManagementScreen();
-            } else if (user.vaiTroId == 2) {
+            } else if (user.vaiTroId == 3) {
               nextScreen = const TeacherHome();
             } else {
               nextScreen = const StudentHome();
@@ -132,15 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final isLoading = context.watch<LoginViewModel>().isLoading;
-
-    // Các biến phụ thuộc vào vai trò đang chọn
-    String titleText = _selectedRole == 1 
-        ? 'Quản trị viên đăng nhập' 
-        : (_selectedRole == 2 ? 'Giảng viên đăng nhập' : 'Sinh viên đăng nhập');
-        
-    String hintUsername = _selectedRole == 1 
-        ? 'Nhập tài khoản quản trị' 
-        : (_selectedRole == 2 ? 'Nhập mã giảng viên' : 'Nhập mã sinh viên');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
@@ -193,33 +152,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 24),
-
-                  // --- TOGGLE: Quản Trị | Giảng Viên | Sinh Viên ---
-                  Wrap(
-                    alignment: WrapAlignment.center,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _buildRoleToggle(1, Icons.admin_panel_settings, 'Quản Trị'),
-                      _buildSeparator(),
-                      _buildRoleToggle(2, Icons.business_center, 'Giảng Viên'),
-                      _buildSeparator(),
-                      _buildRoleToggle(3, Icons.school, 'Sinh Viên'),
-                    ],
-                  ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 40),
 
                   // --- Tiêu đề Form ---
-                  Text(
-                    titleText,
-                    style: const TextStyle(
+                  const Text(
+                    'Đăng nhập hệ thống',
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.normal,
                       color: Color(0xFF212529),
                     ),
                     textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 20),
 
                   // --- FORM ĐĂNG NHẬP ---
                   Container(
@@ -234,28 +179,18 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          _buildLabel(
-                            'Tên đăng nhập:',
-                            tooltipMessage: _selectedRole == 3
-                                ? 'Mã sinh viên HOẶC Mã hồ sơ'
-                                : null, // Chỉ hiện Tooltip cho Sinh viên
-                          ),
+                          _buildLabel('Email trường / Tên đăng nhập:'),
                           const SizedBox(height: 8.0),
                           TextFormField(
                             controller: _usernameController,
-                            decoration: _getInputDecoration(hintUsername),
+                            decoration: _getInputDecoration('VD: mssv@caothang.edu.vn'),
                             validator: (value) => value!.trim().isEmpty
                                 ? 'Vui lòng nhập tên đăng nhập'
                                 : null,
                           ),
                           const SizedBox(height: 16.0),
 
-                          _buildLabel(
-                            'Mật Khẩu:',
-                            tooltipMessage: _selectedRole == 3
-                                ? 'Mật khẩu mặc định là CMND/CCCD'
-                                : null, // Chỉ hiện Tooltip cho Sinh viên
-                          ),
+                          _buildLabel('Mật Khẩu:'),
                           const SizedBox(height: 8.0),
                           TextFormField(
                             controller: _passwordController,
@@ -265,13 +200,13 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ? 'Vui lòng nhập mật khẩu'
                                 : null,
                           ),
-                          const SizedBox(height: 24.0),
+                          const SizedBox(height: 30.0),
 
                           // Nút đăng nhập
                           Center(
                             child: SizedBox(
-                              width: 150,
-                              height: 40,
+                              width: double.infinity,
+                              height: 45,
                               child: ElevatedButton.icon(
                                 onPressed: isLoading ? null : _login,
                                 style: ElevatedButton.styleFrom(
@@ -284,7 +219,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                                 icon: isLoading
                                     ? const SizedBox.shrink()
-                                    : const Icon(Icons.login, size: 18),
+                                    : const Icon(Icons.login, size: 20),
                                 label: isLoading
                                     ? const SizedBox(
                                         height: 20,
@@ -296,7 +231,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                       )
                                     : const Text(
                                         'Đăng nhập',
-                                        style: TextStyle(fontSize: 15),
+                                        style: TextStyle(
+                                          fontSize: 16, 
+                                          fontWeight: FontWeight.bold
+                                        ),
                                       ),
                               ),
                             ),
@@ -305,67 +243,27 @@ class _LoginScreenState extends State<LoginScreen> {
 
                           // --- CÂU THÔNG BÁO DƯỚI NÚT ---
                           Center(
-                            child: Column(
-                              children: [
-                                if (_selectedRole == 3) ...[
-                                  // Thông báo của Sinh viên
-                                  const Text(
-                                    'Chú ý: Sinh viên đã có MÃ SINH VIÊN vui lòng đăng nhập bằng MÃ SINH VIÊN',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: kCtRed,
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 13.5,
+                                ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Quên mật khẩu? Vui lòng liên hệ ',
+                                  ),
+                                  TextSpan(
+                                    text: 'P.CTCT-HSSV',
+                                    style: const TextStyle(
+                                      color: kCtBlue,
                                       fontStyle: FontStyle.italic,
-                                      fontSize: 13.5,
                                     ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  RichText(
-                                    textAlign: TextAlign.center,
-                                    text: TextSpan(
-                                      style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 13.5,
-                                      ),
-                                      children: [
-                                        const TextSpan(
-                                          text: 'Quên mật khẩu? Vui lòng liên hệ ',
-                                        ),
-                                        TextSpan(
-                                          text: 'P.CTCT-HSSV',
-                                          style: const TextStyle(
-                                            color: kCtBlue,
-                                            fontStyle: FontStyle.italic,
-                                          ),
-                                          recognizer: _ctctLinkRecognizer, 
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ] else ...[
-                                  // Thông báo dùng chung cho Giảng Viên và Quản Trị Viên
-                                  RichText(
-                                    textAlign: TextAlign.center,
-                                    text: TextSpan(
-                                      style: const TextStyle(
-                                        color: Colors.black87,
-                                        fontSize: 13.5,
-                                      ),
-                                      children: [
-                                        const TextSpan(
-                                          text: 'Nếu quên mật khẩu? Hãy click ',
-                                        ),
-                                        TextSpan(
-                                          text: 'vào đây.',
-                                          style: const TextStyle(
-                                            color: kCtBlue,
-                                          ),
-                                          recognizer: _lecturerLinkRecognizer,
-                                        ),
-                                      ],
-                                    ),
+                                    recognizer: _ctctLinkRecognizer, 
                                   ),
                                 ],
-                              ],
+                              ),
                             ),
                           ),
                         ],
@@ -393,73 +291,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  // --- HÀM HELPER VẼ NÚT CHUYỂN TAB (TOGGLE) ---
-  Widget _buildRoleToggle(int roleValue, IconData icon, String label) {
-    bool isActive = _selectedRole == roleValue;
-    return InkWell(
-      onTap: () => setState(() => _selectedRole = roleValue),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              color: isActive ? kCtBlue : Colors.grey,
-              size: 18,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: TextStyle(
-                color: isActive ? kCtBlue : Colors.grey,
-                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14.5,
-              ),
-            ),
-          ],
-        ),
+  // --- HÀM HELPER VẼ LABEL ---
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14.0, 
+        color: Colors.black87, 
+        fontWeight: FontWeight.w600
       ),
-    );
-  }
-
-  // --- HÀM HELPER VẼ DẤU GẠCH ĐỨNG ---
-  Widget _buildSeparator() {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 4.0),
-      child: Text('|', style: TextStyle(color: Colors.grey, fontSize: 16)),
-    );
-  }
-
-  // --- HÀM HELPER VẼ LABEL KÈM TOOLTIP ---
-  Widget _buildLabel(String text, {String? tooltipMessage}) {
-    return Row(
-      children: [
-        Text(
-          text,
-          style: const TextStyle(fontSize: 14.0, color: Colors.black87),
-        ),
-        // Nếu có truyền tooltipMessage thì mới hiện dấu '?'
-        if (tooltipMessage != null) ...[
-          const SizedBox(width: 4),
-          Tooltip(
-            message: tooltipMessage,
-            preferBelow: false,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: Colors.grey.shade300),
-              boxShadow: const [
-                BoxShadow(color: Colors.black12, blurRadius: 4),
-              ],
-            ),
-            textStyle: const TextStyle(color: Colors.black87, fontSize: 13),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            margin: const EdgeInsets.only(bottom: 8),
-            triggerMode: TooltipTriggerMode.tap,
-            child: const Icon(Icons.help, color: Colors.green, size: 16),
-          ),
-        ],
-      ],
     );
   }
 
@@ -471,8 +311,8 @@ class _LoginScreenState extends State<LoginScreen> {
       hintText: hint,
       hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
       contentPadding: const EdgeInsets.symmetric(
-        horizontal: 12.0,
-        vertical: 12.0,
+        horizontal: 16.0,
+        vertical: 14.0,
       ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4.0),

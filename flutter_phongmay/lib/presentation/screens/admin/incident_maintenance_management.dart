@@ -1,758 +1,583 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+import 'package:flutter_phongmay/presentation/screens/layout/responsive_layout.dart';
 
-class IncidentMaintenanceScreen extends StatefulWidget {
-  const IncidentMaintenanceScreen({super.key});
+class IncidentMaintenanceManagementScreen extends StatefulWidget {
+  const IncidentMaintenanceManagementScreen({super.key});
 
   @override
-  State<IncidentMaintenanceScreen> createState() =>
-      _IncidentMaintenanceScreenState();
+  State<IncidentMaintenanceManagementScreen> createState() =>
+      _IncidentMaintenanceManagementScreenState();
 }
 
-class _IncidentMaintenanceScreenState extends State<IncidentMaintenanceScreen> {
-  bool loading = true;
-  List<Map<String, dynamic>> incidents = [];
-  List<Map<String, dynamic>> tickets = [];
-  List<Map<String, dynamic>> rooms = [];
-  List<Map<String, dynamic>> computers = [];
-  String active = 'incidents';
+class _IncidentMaintenanceManagementScreenState
+    extends State<IncidentMaintenanceManagementScreen> with SingleTickerProviderStateMixin {
+  
+  late TabController _tabController;
+
+  bool isLoading = true;
+  List<dynamic> incidents = [];
+  List<dynamic> tickets = [];
+
+  List<dynamic> computers = [];
+  List<dynamic> users = [];
+
+  String _incidentStatusFilter = 'all';
+  String _ticketStatusFilter = 'all';
 
   @override
   void initState() {
     super.initState();
-    _load();
+    _tabController = TabController(length: 2, vsync: this);
+    _loadData();
   }
 
-  Future<void> _load() async {
-    setState(() => loading = true);
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => isLoading = true);
     try {
-      List<Map<String, dynamic>> iData = [];
-      List<Map<String, dynamic>> tData = [];
-      List<Map<String, dynamic>> rData = [];
-      List<Map<String, dynamic>> cData = [];
+      final iRes = await ApiService.get('/bao-cao-su-co');
+      final tRes = await ApiService.get('/phieu-bao-tri');
 
-      final iResp = await ApiService.get(
-        '/bao-cao-su-co?orderBy=created_at&descending=true',
-      );
-      if (iResp.statusCode == 200) {
-        final body = ApiService.decodeBody(iResp);
-        if (body != null && body['success'] == true) {
-          iData = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final tResp = await ApiService.get(
-        '/phieu-bao-tri?orderBy=created_at&descending=true',
-      );
-      if (tResp.statusCode == 200) {
-        final body = ApiService.decodeBody(tResp);
-        if (body != null && body['success'] == true) {
-          tData = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final rResp = await ApiService.get('/phong-may');
-      if (rResp.statusCode == 200) {
-        final body = ApiService.decodeBody(rResp);
-        if (body != null && body['success'] == true) {
-          rData = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final cResp = await ApiService.get('/may-tinh');
-      if (cResp.statusCode == 200) {
-        final body = ApiService.decodeBody(cResp);
-        if (body != null && body['success'] == true) {
-          cData = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
+      dynamic cRes, uRes;
+      try { cRes = await ApiService.get('/may-tinh'); } catch (e) { debugPrint('Lỗi máy: $e'); }
+      try { uRes = await ApiService.get('/nguoi-dung'); } catch (e) { debugPrint('Lỗi người dùng: $e'); }
 
       setState(() {
-        incidents = iData;
-        tickets = tData;
-        rooms = rData;
-        computers = cData;
+        incidents = ApiService.decodeBody(iRes)?['data'] ?? [];
+        tickets = ApiService.decodeBody(tRes)?['data'] ?? [];
+        computers = (cRes != null) ? (ApiService.decodeBody(cRes)?['data'] ?? []) : [];
+        users = (uRes != null) ? (ApiService.decodeBody(uRes)?['data'] ?? []) : [];
       });
-    } catch (_) {}
-    setState(() => loading = false);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tải dữ liệu: $e'), backgroundColor: Colors.red));
+      }
+    }
+    setState(() => isLoading = false);
+  }
+
+  InputDecoration _customInputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey.shade400)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Colors.blue, width: 2)),
+    );
+  }
+
+  List<DropdownMenuItem<int>> _safeMap(List<dynamic> list, String emptyText, String Function(dynamic) labelMapper) {
+    final items = <DropdownMenuItem<int>>[
+      DropdownMenuItem(value: null, child: Text(emptyText, style: const TextStyle(color: Colors.grey))),
+    ];
+    items.addAll(list.map<DropdownMenuItem<int>>(
+      (item) => DropdownMenuItem(value: item['id'] as int?, child: Text(labelMapper(item))),
+    ));
+    return items;
+  }
+
+  int? _getValidId(dynamic id, List<dynamic> list) {
+    if (id == null) return null;
+    final parsedId = int.tryParse(id.toString());
+    if (parsedId != null && list.any((e) => e['id'] == parsedId)) return parsedId;
+    return null;
+  }
+
+  String _normalizeLoaiBaoTri(String? val) {
+    if (val == null) return 'Sửa chữa';
+    final lower = val.toLowerCase();
+    if (lower.contains('thay')) return 'Thay thế';
+    if (lower.contains('vệ sinh') || lower.contains('bảo dưỡng')) return 'Vệ sinh';
+    return 'Sửa chữa';
+  }
+
+  String _normalizeTrangThaiPhieu(String? val) {
+    if (val == null) return 'pending';
+    final lower = val.toLowerCase();
+    if (lower.contains('progress')) return 'in_progress';
+    if (lower.contains('complet') || lower.contains('hoàn')) return 'completed';
+    return 'pending';
+  }
+
+  // ================= MODAL TẠO/SỬA PHIẾU BẢO TRÌ =================
+  void _openTicketModal({Map<String, dynamic>? incidentItem, Map<String, dynamic>? ticketItem}) {
+    bool isFromApprove = incidentItem != null && ticketItem == null;
+
+    int? selectedIncidentId = _getValidId(ticketItem?['ma_bao_cao_su_co'] ?? incidentItem?['id'], incidents);
+    int? selectedAssigneeId = _getValidId(ticketItem?['ma_nguoi_phu_trach'], users);
+
+    final cachXuLyCtrl = TextEditingController(text: ticketItem?['cach_xu_ly'] ?? '');
+    final chiPhiCtrl = TextEditingController(text: (ticketItem?['chi_phi'] ?? 0).toString());
+    
+    String loaiBaoTri = _normalizeLoaiBaoTri(ticketItem?['loai_bao_tri']);
+    String trangThai = _normalizeTrangThaiPhieu(ticketItem?['trang_thai']);
+
+    DateTime? startDate = ticketItem?['ngay_bat_dau'] != null ? DateTime.tryParse(ticketItem!['ngay_bat_dau'].toString()) : DateTime.now();
+    DateTime? endDate = ticketItem?['ngay_ket_thuc'] != null ? DateTime.tryParse(ticketItem!['ngay_ket_thuc'].toString()) : null;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 24, right: 24, top: 20),
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.85, minChildSize: 0.5, maxChildSize: 0.95, expand: false,
+              builder: (_, scrollController) => SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(child: Container(width: 50, height: 6, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)))),
+                    const SizedBox(height: 24),
+                    Text(
+                      ticketItem == null ? 'Duyệt & Tạo Phiếu Bảo Trì' : 'Cập nhật Phiếu', 
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.blue)
+                    ),
+                    const SizedBox(height: 24),
+                    
+                    DropdownButtonFormField<int>(
+                      isExpanded: true, initialValue: selectedIncidentId, 
+                      decoration: _customInputDecoration('Sự cố liên quan (*)').copyWith(fillColor: Colors.grey.shade100, filled: true),
+                      items: _safeMap(incidents, 'Không có sự cố nào', (i) => 'ID: ${i['id']} - ${i['tieu_de']}'),
+                      onChanged: null, 
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<int>(
+                            isExpanded: true, initialValue: selectedAssigneeId, 
+                            decoration: _customInputDecoration('Người phụ trách').copyWith(fillColor: isFromApprove ? Colors.grey.shade100 : Colors.white, filled: isFromApprove),
+                            items: _safeMap(users, 'Chưa phân công', (u) => u['ho_ten']),
+                            onChanged: isFromApprove ? null : (v) => setModalState(() => selectedAssigneeId = v),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            isExpanded: true, initialValue: loaiBaoTri, 
+                            decoration: _customInputDecoration('Loại bảo trì').copyWith(fillColor: isFromApprove ? Colors.grey.shade100 : Colors.white, filled: isFromApprove),
+                            items: const [
+                              DropdownMenuItem(value: 'Sửa chữa', child: Text('Sửa chữa')),
+                              DropdownMenuItem(value: 'Thay thế', child: Text('Thay thế linh kiện')),
+                              DropdownMenuItem(value: 'Vệ sinh', child: Text('Vệ sinh/Bảo dưỡng')),
+                            ],
+                            onChanged: isFromApprove ? null : (v) => setModalState(() => loaiBaoTri = v!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: InkWell(
+                            onTap: isFromApprove ? null : () async {
+                              final d = await showDatePicker(context: context, initialDate: startDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                              if (d != null) setModalState(() => startDate = d);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isFromApprove ? Colors.grey.shade100 : Colors.transparent, border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(12)),
+                              child: Text(startDate != null ? 'Bắt đầu: ${DateFormat('dd/MM/yyyy').format(startDate!)}' : 'Ngày bắt đầu', style: const TextStyle(fontSize: 14)),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: InkWell(
+                            onTap: isFromApprove ? null : () async {
+                              final d = await showDatePicker(context: context, initialDate: endDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2030));
+                              if (d != null) setModalState(() => endDate = d);
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.all(14), decoration: BoxDecoration(color: isFromApprove ? Colors.grey.shade100 : Colors.transparent, border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(12)),
+                              child: Text(endDate != null ? 'Hoàn thành: ${DateFormat('dd/MM/yyyy').format(endDate!)}' : 'Ngày hoàn thành', style: const TextStyle(fontSize: 14)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: chiPhiCtrl, keyboardType: TextInputType.number, readOnly: isFromApprove,
+                            decoration: _customInputDecoration('Chi phí (VNĐ)').copyWith(fillColor: isFromApprove ? Colors.grey.shade100 : Colors.white, filled: isFromApprove)
+                          )
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            isExpanded: true, initialValue: trangThai, 
+                            decoration: _customInputDecoration('Trạng thái').copyWith(fillColor: isFromApprove ? Colors.grey.shade100 : Colors.white, filled: isFromApprove),
+                            items: const [
+                              DropdownMenuItem(value: 'pending', child: Text('Chưa xử lý')),
+                              DropdownMenuItem(value: 'in_progress', child: Text('Đang tiến hành')),
+                              DropdownMenuItem(value: 'completed', child: Text('Đã hoàn tất')),
+                            ],
+                            onChanged: isFromApprove ? null : (v) => setModalState(() => trangThai = v!),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    TextField(controller: cachXuLyCtrl, decoration: _customInputDecoration('Cách xử lý / Ghi chú'), maxLines: 2),
+                    const SizedBox(height: 24),
+
+                    SizedBox(
+                      width: double.infinity, height: 52,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade700, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                        onPressed: () async {
+                          if (selectedIncidentId == null) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn Sự cố!'), backgroundColor: Colors.red)); return; }
+                          final payload = {
+                            'ma_bao_cao_su_co': selectedIncidentId, 'ma_nguoi_phu_trach': selectedAssigneeId, 'loai_bao_tri': loaiBaoTri,
+                            'ngay_bat_dau': startDate != null ? DateFormat('yyyy-MM-dd').format(startDate!) : null,
+                            'ngay_ket_thuc': endDate != null ? DateFormat('yyyy-MM-dd').format(endDate!) : null,
+                            'cach_xu_ly': cachXuLyCtrl.text, 'chi_phi': double.tryParse(chiPhiCtrl.text) ?? 0, 'trang_thai': trangThai,
+                          };
+                          
+                          final messenger = ScaffoldMessenger.of(context);
+                          try {
+                            if (ticketItem == null) { 
+                              // --- TẠO PHIẾU BẢO TRÌ MỚI ---
+                              await ApiService.post('/phieu-bao-tri', payload); 
+                              
+                              if (isFromApprove) {
+                                await ApiService.put('/bao-cao-su-co/${incidentItem['id']}', {
+                                  'tieu_de': incidentItem['tieu_de'],
+                                  'ma_may_tinh': incidentItem['ma_may_tinh'],
+                                  'loai_su_co': incidentItem['loai_su_co'],
+                                  'muc_do': incidentItem['muc_do'],
+                                  'trang_thai': 'in_progress', // Sang Đang sửa chữa
+                                  'mo_ta': incidentItem['mo_ta']
+                                });
+                              }
+
+                              messenger.showSnackBar(const SnackBar(content: Text('Duyệt sự cố & Tạo phiếu thành công!'), backgroundColor: Colors.green));
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx); 
+                              await _loadData();
+                              _tabController.animateTo(1); 
+
+                            } else { 
+                              // --- CẬP NHẬT PHIẾU CŨ & TỰ ĐỘNG ĐỒNG BỘ SỰ CỐ ---
+                              await ApiService.put('/phieu-bao-tri/${ticketItem['id']}', payload); 
+
+                              // ĐỒNG BỘ TRẠNG THÁI: Tìm sự cố gốc của phiếu này
+                              final originalIncident = incidents.firstWhere((inc) => inc['id'] == selectedIncidentId, orElse: () => null);
+                              if (originalIncident != null) {
+                                // Ánh xạ trạng thái
+                                String newIncidentStatus = originalIncident['trang_thai'];
+                                if (trangThai == 'completed') {
+                                  newIncidentStatus = 'closed'; // Phiếu hoàn tất -> Sự cố đã khắc phục
+                                } else if (trangThai == 'in_progress') {
+                                  newIncidentStatus = 'in_progress';
+                                } else if (trangThai == 'pending') {
+                                  newIncidentStatus = 'open';
+                                }
+
+                                // Nếu trạng thái phiếu khiến trạng thái sự cố thay đổi thì tự động Update sự cố
+                                if (newIncidentStatus != originalIncident['trang_thai']) {
+                                  await ApiService.put('/bao-cao-su-co/$selectedIncidentId', {
+                                    'tieu_de': originalIncident['tieu_de'],
+                                    'ma_may_tinh': originalIncident['ma_may_tinh'],
+                                    'loai_su_co': originalIncident['loai_su_co'],
+                                    'muc_do': originalIncident['muc_do'],
+                                    'trang_thai': newIncidentStatus, 
+                                    'mo_ta': originalIncident['mo_ta']
+                                  });
+                                }
+                              }
+
+                              messenger.showSnackBar(const SnackBar(content: Text('Cập nhật phiếu và đồng bộ sự cố thành công!'), backgroundColor: Colors.green));
+                              if (!ctx.mounted) return;
+                              Navigator.pop(ctx); 
+                              _loadData();
+                            }
+                          } catch (e) {
+                            messenger.showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+                          }
+                        },
+                        child: Text(ticketItem == null ? 'DUYỆT & TẠO PHIẾU' : 'CẬP NHẬT', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _deleteItem(String endpoint, int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Xác nhận xóa'), content: const Text('Bạn có chắc chắn muốn xóa mục này khỏi hệ thống?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          ElevatedButton(style: ElevatedButton.styleFrom(backgroundColor: Colors.red), onPressed: () => Navigator.pop(ctx, true), child: const Text('Xóa', style: TextStyle(color: Colors.white))),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      final messenger = ScaffoldMessenger.of(context);
+      try {
+        await ApiService.delete('$endpoint/$id');
+        messenger.showSnackBar(const SnackBar(content: Text('Xóa thành công!'), backgroundColor: Colors.green));
+        _loadData();
+      } catch(e) {
+        messenger.showSnackBar(SnackBar(content: Text('Lỗi khi xóa: $e'), backgroundColor: Colors.red));
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: AdminLayout(
-        title: 'Quản lý Bảo trì',
-        child: loading
-            ? const Center(child: CircularProgressIndicator())
-            : Container(
-                padding: const EdgeInsets.all(18.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Quản lý Bảo trì & Sự cố',
-                      style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TabBar(
-                      labelColor: Theme.of(context).primaryColor,
-                      unselectedLabelColor: Colors.black87,
-                      indicatorColor: Theme.of(context).primaryColor,
-                      tabs: const [
-                        Tab(text: 'Báo cáo Sự cố'),
-                        Tab(text: 'Phiếu Bảo trì'),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: TabBarView(
-                        children: [_buildIncidentsTab(), _buildTicketsTab()],
-                      ),
-                    ),
-                  ],
-                ),
+    return AdminLayout(
+      title: 'Quản lý Bảo trì',
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: Column(
+          children: [
+            Container(
+              color: Colors.white,
+              child: TabBar(
+                controller: _tabController,
+                labelColor: Colors.blue.shade800, unselectedLabelColor: Colors.grey, indicatorColor: Colors.blue.shade800,
+                tabs: const [
+                  Tab(text: 'Báo cáo Sự cố', icon: Icon(Icons.warning_amber_rounded)),
+                  Tab(text: 'Phiếu Bảo trì', icon: Icon(Icons.build_circle_outlined)),
+                ],
               ),
+            ),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : TabBarView(
+                      controller: _tabController,
+                      children: [_buildIncidentsTab(), _buildTicketsTab()]
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  // --- TAB 1: BÁO CÁO SỰ CỐ ---
   Widget _buildIncidentsTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _addIncident,
-              icon: const Icon(Icons.add),
-              label: const Text('Báo cáo sự cố'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+    final filteredIncidents = incidents.where((inc) {
+      if (_incidentStatusFilter == 'all') return true;
+      return inc['trang_thai'] == _incidentStatusFilter;
+    }).toList();
+
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10), color: Colors.white),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _incidentStatusFilter,
+                icon: const Icon(Icons.filter_list, size: 20, color: Colors.grey),
+                style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                items: const [
+                  DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
+                  DropdownMenuItem(value: 'open', child: Text('Đang mở')),
+                  DropdownMenuItem(value: 'in_progress', child: Text('Đang sửa chữa')),
+                  DropdownMenuItem(value: 'closed', child: Text('Đã khắc phục')),
+                ],
+                onChanged: (val) => setState(() => _incidentStatusFilter = val!),
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxWidth < 900;
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth.isFinite
-                          ? constraints.maxWidth
-                          : MediaQuery.of(context).size.width,
-                    ),
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 24,
-                        columns: isCompact
-                            ? const [
-                                DataColumn(label: Text('Tiêu đề')),
-                                DataColumn(label: Text('Ngày')),
-                                DataColumn(label: Text('Hành động')),
-                              ]
-                            : const [
-                                DataColumn(label: Text('Tiêu đề')),
-                                DataColumn(label: Text('Loại')),
-                                DataColumn(label: Text('Phòng')),
-                                DataColumn(label: Text('Máy')),
-                                DataColumn(label: Text('Ngày')),
-                                DataColumn(label: Text('Trạng thái')),
-                                DataColumn(label: Text('Hành động')),
-                              ],
-                        rows: incidents.map((i) {
-                          if (isCompact) {
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(i['tieu_de']?.toString() ?? '-')),
-                                DataCell(
-                                  Text(i['created_at']?.toString() ?? '-'),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit),
-                                        onPressed: () => _editIncident(i),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () => _deleteIncident(i),
-                                      ),
-                                    ],
+          ),
+          const SizedBox(height: 15),
+          Expanded(
+            child: filteredIncidents.isEmpty
+                ? Center(child: Text('Không có báo cáo sự cố nào.', style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic)))
+                : ListView.builder(
+                    itemCount: filteredIncidents.length,
+                    itemBuilder: (ctx, i) {
+                      final inc = filteredIncidents[i];
+                      Color statusColor = inc['trang_thai'] == 'closed' ? Colors.green : (inc['trang_thai'] == 'in_progress' ? Colors.orange : Colors.red);
+                      
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12), elevation: 1.5, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(child: Text('${inc['tieu_de']}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue))),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                    child: Text(inc['trang_thai'].toString().toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor)),
                                   ),
-                                ),
-                              ],
-                            );
-                          }
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(i['tieu_de']?.toString() ?? '-')),
-                              DataCell(Text(i['loai']?.toString() ?? '-')),
-                              DataCell(Text(i['phong']?.toString() ?? '-')),
-                              DataCell(Text(i['may']?.toString() ?? '-')),
-                              DataCell(
-                                Text(i['created_at']?.toString() ?? '-'),
+                                ],
                               ),
-                              DataCell(
-                                Text(i['trang_thai']?.toString() ?? '-'),
-                              ),
-                              DataCell(
+                              const Divider(height: 20),
+                              Row(children: [Icon(Icons.computer, size: 16, color: Colors.blueGrey.shade400), const SizedBox(width: 8), Text('Máy: ${inc['ten_may'] ?? 'N/A'} - ${inc['ten_phong'] ?? ''}', style: const TextStyle(fontWeight: FontWeight.w500))]),
+                              const SizedBox(height: 6),
+                              Row(children: [Icon(Icons.person, size: 16, color: Colors.blueGrey.shade400), const SizedBox(width: 8), Text('Người báo: ${inc['nguoi_bao_cao'] ?? 'Ẩn danh'}')]),
+                              const SizedBox(height: 6),
+                              Row(children: [Icon(Icons.warning, size: 16, color: inc['muc_do'] == 'high' ? Colors.red : Colors.orange), const SizedBox(width: 8), Text('Mức độ: ${inc['muc_do']} | Loại: ${inc['loai_su_co']}')]),
+                              
+                              if (inc['trang_thai'] == 'open') ...[
+                                const SizedBox(height: 16),
                                 Row(
-                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.end,
                                   children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editIncident(i),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _openTicketModal(incidentItem: inc),
+                                      icon: const Icon(Icons.check_circle, size: 16),
+                                      label: const Text('Duyệt'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, foregroundColor: Colors.white),
                                     ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteIncident(i),
+                                    const SizedBox(width: 8),
+                                    ElevatedButton.icon(
+                                      onPressed: () => _deleteItem('/bao-cao-su-co', inc['id']),
+                                      icon: const Icon(Icons.delete, size: 16),
+                                      label: const Text('Xóa'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red, foregroundColor: Colors.white),
                                     ),
                                   ],
                                 ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTicketsTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _createTicket,
-              icon: const Icon(Icons.add),
-              label: const Text('Tạo phiếu bảo trì'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isCompact = constraints.maxWidth < 900;
-                return SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minWidth: constraints.maxWidth.isFinite
-                          ? constraints.maxWidth
-                          : MediaQuery.of(context).size.width,
-                    ),
-                    child: SingleChildScrollView(
-                      child: DataTable(
-                        columnSpacing: 24,
-                        columns: isCompact
-                            ? const [
-                                DataColumn(label: Text('Loại bảo trì')),
-                                DataColumn(label: Text('Ngày bắt đầu')),
-                                DataColumn(label: Text('Hành động')),
-                              ]
-                            : const [
-                                DataColumn(label: Text('Loại bảo trì')),
-                                DataColumn(label: Text('Ngày bắt đầu')),
-                                DataColumn(label: Text('Ngày kết thúc')),
-                                DataColumn(label: Text('Chi phí')),
-                                DataColumn(label: Text('Trạng thái')),
-                                DataColumn(label: Text('Hành động')),
                               ],
-                        rows: tickets.map((t) {
-                          if (isCompact) {
-                            return DataRow(
-                              cells: [
-                                DataCell(
-                                  Text(t['loai_bao_tri']?.toString() ?? '-'),
-                                ),
-                                DataCell(
-                                  Text(t['ngay_bat_dau']?.toString() ?? '-'),
-                                ),
-                                DataCell(
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      IconButton(
-                                        icon: const Icon(Icons.edit),
-                                        onPressed: () => _editTicket(t),
-                                      ),
-                                      IconButton(
-                                        icon: const Icon(Icons.delete_outline),
-                                        onPressed: () => _deleteTicket(t),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            );
-                          }
-                          return DataRow(
-                            cells: [
-                              DataCell(
-                                Text(t['loai_bao_tri']?.toString() ?? '-'),
-                              ),
-                              DataCell(
-                                Text(t['ngay_bat_dau']?.toString() ?? '-'),
-                              ),
-                              DataCell(
-                                Text(t['ngay_ket_thuc']?.toString() ?? '-'),
-                              ),
-                              DataCell(Text(t['chi_phi']?.toString() ?? '-')),
-                              DataCell(
-                                Text(t['trang_thai']?.toString() ?? '-'),
-                              ),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editTicket(t),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteTicket(t),
-                                    ),
-                                  ],
-                                ),
-                              ),
                             ],
-                          );
-                        }).toList(),
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _addIncident() async {
-    final titleController = TextEditingController();
-    final descController = TextEditingController();
-    final typeController = TextEditingController();
-    int? selectedRoomId = rooms.isNotEmpty
-        ? (rooms.first['id'] as num?)?.toInt()
-        : null;
-    int? selectedComputerId = computers.isNotEmpty
-        ? (computers.first['id'] as num?)?.toInt()
-        : null;
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Báo cáo sự cố'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Tiêu đề'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: selectedRoomId,
-                items: rooms
-                    .map(
-                      (r) => DropdownMenuItem(
-                        value: (r['id'] as num?)?.toInt(),
-                        child: Text(r['ten_phong']?.toString() ?? '-'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => selectedRoomId = v,
-                decoration: const InputDecoration(labelText: 'Phòng'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: selectedComputerId,
-                items: computers
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: (c['id'] as num?)?.toInt(),
-                        child: Text(
-                          c['ma_may']?.toString() ??
-                              c['ma_may']?.toString() ??
-                              '-',
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => selectedComputerId = v,
-                decoration: const InputDecoration(labelText: 'Máy'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: typeController,
-                decoration: const InputDecoration(labelText: 'Loại'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: 'Mô tả'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final t = titleController.text.trim();
-              final d = descController.text.trim();
-              final l = typeController.text.trim();
-              if (t.isEmpty) return;
-              try {
-                await ApiService.post('/bao-cao-su-co', {
-                  'tieu_de': t,
-                  'mo_ta': d,
-                  'loai': l,
-                  'phong_id': selectedRoomId,
-                  'may_id': selectedComputerId,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _load();
-            },
-            child: const Text('Lưu'),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
   }
 
-  Future<void> _createTicket() async {
-    final loaiController = TextEditingController();
-    final startController = TextEditingController();
-    final endController = TextEditingController();
-    final chiPhiController = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Tạo phiếu bảo trì'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: loaiController,
-              decoration: const InputDecoration(labelText: 'Loại bảo trì'),
-            ),
-            TextField(
-              controller: startController,
-              decoration: const InputDecoration(
-                labelText: 'Ngày bắt đầu (YYYY-MM-DD)',
-              ),
-            ),
-            TextField(
-              controller: endController,
-              decoration: const InputDecoration(
-                labelText: 'Ngày kết thúc (YYYY-MM-DD)',
-              ),
-            ),
-            TextField(
-              controller: chiPhiController,
-              decoration: const InputDecoration(labelText: 'Chi phí'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final loai = loaiController.text.trim();
-              final start = startController.text.trim();
-              final end = endController.text.trim();
-              final chi = int.tryParse(chiPhiController.text.trim()) ?? 0;
-              if (loai.isEmpty) return;
-              try {
-                await ApiService.post('/phieu-bao-tri', {
-                  'loai_bao_tri': loai,
-                  'ngay_bat_dau': start,
-                  'ngay_ket_thuc': end,
-                  'chi_phi': chi,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _load();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
+  // --- TAB 2: PHIẾU BẢO TRÌ ---
+  Widget _buildTicketsTab() {
+    final filteredTickets = tickets.where((tic) {
+      if (_ticketStatusFilter == 'all') return true;
+      return tic['trang_thai'] == _ticketStatusFilter;
+    }).toList();
 
-  Future<void> _editIncident(Map<String, dynamic> i) async {
-    final id = i['id'];
-    if (id == null) return;
-    final titleController = TextEditingController(
-      text: i['tieu_de']?.toString() ?? '',
-    );
-    final descController = TextEditingController(
-      text: i['mo_ta']?.toString() ?? '',
-    );
-    final typeController = TextEditingController(
-      text: i['loai']?.toString() ?? '',
-    );
-    int? selectedRoomId =
-        (i['phong_id'] as num?)?.toInt() ?? (i['phong'] as int?);
-    int? selectedComputerId =
-        (i['may_id'] as num?)?.toInt() ?? (i['may'] as int?);
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa báo cáo sự cố'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+    return Padding(
+      padding: const EdgeInsets.all(12.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              TextField(
-                controller: titleController,
-                decoration: const InputDecoration(labelText: 'Tiêu đề'),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(10), color: Colors.white),
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: _ticketStatusFilter,
+                    icon: const Icon(Icons.filter_list, size: 20, color: Colors.grey),
+                    style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w500),
+                    items: const [
+                      DropdownMenuItem(value: 'all', child: Text('Tất cả trạng thái')),
+                      DropdownMenuItem(value: 'pending', child: Text('Chưa xử lý')),
+                      DropdownMenuItem(value: 'in_progress', child: Text('Đang tiến hành')),
+                      DropdownMenuItem(value: 'completed', child: Text('Đã hoàn tất')),
+                    ],
+                    onChanged: (val) => setState(() => _ticketStatusFilter = val!),
+                  ),
+                ),
               ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: selectedRoomId,
-                items: rooms
-                    .map(
-                      (r) => DropdownMenuItem(
-                        value: (r['id'] as num?)?.toInt(),
-                        child: Text(r['ten_phong']?.toString() ?? '-'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => selectedRoomId = v,
-                decoration: const InputDecoration(labelText: 'Phòng'),
-              ),
-              const SizedBox(height: 8),
-              DropdownButtonFormField<int>(
-                value: selectedComputerId,
-                items: computers
-                    .map(
-                      (c) => DropdownMenuItem(
-                        value: (c['id'] as num?)?.toInt(),
-                        child: Text(c['ma_may']?.toString() ?? '-'),
-                      ),
-                    )
-                    .toList(),
-                onChanged: (v) => selectedComputerId = v,
-                decoration: const InputDecoration(labelText: 'Máy'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: typeController,
-                decoration: const InputDecoration(labelText: 'Loại'),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: descController,
-                decoration: const InputDecoration(labelText: 'Mô tả'),
-              ),
+              if (!ResponsiveLayout.isMobile(context))
+                ElevatedButton.icon(
+                  onPressed: () => _openTicketModal(),
+                  icon: const Icon(Icons.add), label: const Text('Tạo Phiếu bảo trì'),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.blue.shade800, foregroundColor: Colors.white, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                ),
             ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/bao-cao-su-co/$id', {
-                  'tieu_de': titleController.text.trim(),
-                  'mo_ta': descController.text.trim(),
-                  'loai': typeController.text.trim(),
-                  'phong_id': selectedRoomId,
-                  'may_id': selectedComputerId,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _load();
-            },
-            child: const Text('Lưu'),
+          const SizedBox(height: 15),
+          Expanded(
+            child: filteredTickets.isEmpty
+                ? Center(child: Text('Chưa có phiếu bảo trì nào.', style: TextStyle(color: Colors.grey.shade600, fontStyle: FontStyle.italic)))
+                : ListView.builder(
+                    itemCount: filteredTickets.length,
+                    itemBuilder: (ctx, i) {
+                      final tic = filteredTickets[i];
+                      Color statusColor = tic['trang_thai'] == 'completed' ? Colors.green : (tic['trang_thai'] == 'in_progress' ? Colors.orange : Colors.grey);
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 12), elevation: 1.5, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Expanded(child: Text('Phiếu #${tic['id']} - ${tic['loai_bao_tri']}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blue))),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                    decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                    child: Text(tic['trang_thai'].toString().toUpperCase(), style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: statusColor)),
+                                  ),
+                                  PopupMenuButton<String>(
+                                    icon: const Icon(Icons.more_vert, color: Colors.grey), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                    onSelected: (value) {
+                                      if (value == 'edit') { _openTicketModal(ticketItem: tic); }
+                                      if (value == 'delete') { _deleteItem('/phieu-bao-tri', tic['id']); }
+                                    },
+                                    itemBuilder: (ctx) => [
+                                      const PopupMenuItem(value: 'edit', child: Row(children: [Icon(Icons.edit, size: 18), SizedBox(width: 8), Text('Sửa phiếu')])),
+                                      const PopupMenuItem(value: 'delete', child: Row(children: [Icon(Icons.delete, color: Colors.red, size: 18), SizedBox(width: 8), Text('Xóa', style: TextStyle(color: Colors.red))])),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              const Divider(height: 20),
+                              Text('Lỗi: ${tic['ten_su_co'] ?? 'N/A'}', style: const TextStyle(fontWeight: FontWeight.w500)),
+                              const SizedBox(height: 6),
+                              Row(children: [Icon(Icons.engineering, size: 16, color: Colors.blueGrey.shade400), const SizedBox(width: 8), Text('Phụ trách: ${tic['nguoi_phu_trach'] ?? 'Chưa phân công'}')]),
+                              const SizedBox(height: 6),
+                              Builder(
+                                builder: (context) {
+                                  final double chiPhi = double.tryParse(tic['chi_phi']?.toString() ?? '0') ?? 0.0;
+                                  final String formattedChiPhi = NumberFormat.currency(locale: 'vi', symbol: '').format(chiPhi).trim();
+                                  return Text('Chi phí: $formattedChiPhi VNĐ', style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold));
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
           ),
         ],
       ),
     );
-  }
-
-  Future<void> _deleteIncident(Map<String, dynamic> i) async {
-    final id = i['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa báo cáo này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/bao-cao-su-co/$id');
-    } catch (_) {}
-    await _load();
-  }
-
-  Future<void> _editTicket(Map<String, dynamic> t) async {
-    final id = t['id'];
-    if (id == null) return;
-    final loaiController = TextEditingController(
-      text: t['loai_bao_tri']?.toString() ?? '',
-    );
-    final startController = TextEditingController(
-      text: t['ngay_bat_dau']?.toString() ?? '',
-    );
-    final endController = TextEditingController(
-      text: t['ngay_ket_thuc']?.toString() ?? '',
-    );
-    final chiController = TextEditingController(
-      text: t['chi_phi']?.toString() ?? '0',
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa phiếu bảo trì'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: loaiController,
-              decoration: const InputDecoration(labelText: 'Loại bảo trì'),
-            ),
-            TextField(
-              controller: startController,
-              decoration: const InputDecoration(
-                labelText: 'Ngày bắt đầu (YYYY-MM-DD)',
-              ),
-            ),
-            TextField(
-              controller: endController,
-              decoration: const InputDecoration(
-                labelText: 'Ngày kết thúc (YYYY-MM-DD)',
-              ),
-            ),
-            TextField(
-              controller: chiController,
-              decoration: const InputDecoration(labelText: 'Chi phí'),
-              keyboardType: TextInputType.number,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/phieu-bao-tri/$id', {
-                  'loai_bao_tri': loaiController.text.trim(),
-                  'ngay_bat_dau': startController.text.trim(),
-                  'ngay_ket_thuc': endController.text.trim(),
-                  'chi_phi': int.tryParse(chiController.text.trim()) ?? 0,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _load();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteTicket(Map<String, dynamic> t) async {
-    final id = t['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa phiếu này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/phieu-bao-tri/$id');
-    } catch (_) {}
-    await _load();
   }
 }

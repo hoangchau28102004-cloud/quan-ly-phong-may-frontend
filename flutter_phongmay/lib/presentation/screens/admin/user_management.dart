@@ -127,7 +127,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Giới tính *'),
-                    value: selectedGender,
+                    initialValue: selectedGender,
                     items: const [
                       DropdownMenuItem(value: 'Nam', child: Text('Nam')),
                       DropdownMenuItem(value: 'Nữ', child: Text('Nữ')),
@@ -161,7 +161,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       return vm.roles.isNotEmpty
                           ? DropdownButtonFormField<int>(
                               decoration: const InputDecoration(labelText: 'Vai trò *'),
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               items: vm.roles.map((r) => DropdownMenuItem(value: r['id'] as int, child: Text(r['ten_vai_tro'] ?? ''))).toList(),
                               onChanged: (v) => setStateDialog(() => _selectedRole = v ?? _selectedRole),
                             )
@@ -249,7 +249,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Giới tính *'),
-                    value: ['Nam', 'Nữ'].contains(selectedGender) ? selectedGender : null,
+                    initialValue: ['Nam', 'Nữ'].contains(selectedGender) ? selectedGender : null,
                     items: const [
                       DropdownMenuItem(value: 'Nam', child: Text('Nam')),
                       DropdownMenuItem(value: 'Nữ', child: Text('Nữ')),
@@ -281,7 +281,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       return vm2.roles.isNotEmpty
                           ? DropdownButtonFormField<int>(
                               decoration: const InputDecoration(labelText: 'Vai trò *'),
-                              value: _selectedRole,
+                              initialValue: _selectedRole,
                               items: vm2.roles.map((r) => DropdownMenuItem(value: r['id'] as int, child: Text(r['ten_vai_tro'] ?? ''))).toList(),
                               onChanged: (v) => setStateDialog(() => _selectedRole = v ?? _selectedRole),
                             )
@@ -646,7 +646,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                 scrollDirection: Axis.horizontal, // Cuộn ngang nếu bảng quá rộng
                                 child: DataTable(
                                   columnSpacing: 24,
-                                  headingRowColor: MaterialStateProperty.all(Colors.grey.shade100),
+                                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
                                   columns: const [
                                     DataColumn(label: Text('Họ và Tên', style: TextStyle(fontWeight: FontWeight.bold))),
                                     DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.bold))),

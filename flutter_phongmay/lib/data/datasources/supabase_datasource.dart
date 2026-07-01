@@ -56,8 +56,9 @@ class SupabaseService {
     }
     final res = await (client.from(table) as dynamic).insert([data]).execute();
     final error = (res as dynamic).error;
-    if (error != null)
+    if (error != null) {
       throw Exception((error as dynamic).message ?? error.toString());
+    }
     return (res as dynamic).data;
   }
 
@@ -75,8 +76,9 @@ class SupabaseService {
         .eq(column, value)
         .execute();
     final error = (res as dynamic).error;
-    if (error != null)
+    if (error != null) {
       throw Exception((error as dynamic).message ?? error.toString());
+    }
     return (res as dynamic).data;
   }
 
@@ -93,8 +95,9 @@ class SupabaseService {
         .eq(column, value)
         .execute();
     final error = (res as dynamic).error;
-    if (error != null)
+    if (error != null) {
       throw Exception((error as dynamic).message ?? error.toString());
+    }
     return (res as dynamic).data;
   }
 }

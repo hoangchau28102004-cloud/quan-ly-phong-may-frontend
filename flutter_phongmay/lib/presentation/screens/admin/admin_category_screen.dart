@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 
 class AdminCategoryScreen extends StatefulWidget {
-  const AdminCategoryScreen({Key? key}) : super(key: key);
+  const AdminCategoryScreen({super.key});
 
   @override
   _AdminCategoryScreenState createState() => _AdminCategoryScreenState();
@@ -338,7 +338,7 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                     ),
                     child: SingleChildScrollView(
                       child: DataTable(
-                        headingRowColor: MaterialStateProperty.all(
+                        headingRowColor: WidgetStateProperty.all(
                           Colors.grey.shade100,
                         ),
                         columnSpacing: 24,

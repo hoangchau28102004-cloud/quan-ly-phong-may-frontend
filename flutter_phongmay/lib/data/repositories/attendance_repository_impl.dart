@@ -16,7 +16,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   ) async {
     try {
       final response = await ApiService.post('/diem-danh', {
-        'may_tinh_id': mayTinhId,
+        'ma_may_tinh': mayTinhId,
         'tt_diem_danh': ttDiemDanh,
         'tt_may_tinh': ttMayTinh,
       });
@@ -30,7 +30,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
   Future<bool> reportIncident(int mayTinhId, String moTa) async {
     try {
       final response = await ApiService.post('/bao-cao-su-co', {
-        'may_tinh_id': mayTinhId,
+        'ma_may_tinh': mayTinhId,
         'mo_ta': moTa,
         'trang_thai': 'CHO_XU_LY',
       });
@@ -57,7 +57,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
                 DateTime.tryParse(map['thoi_gian_dd'] ?? '') ?? DateTime.now(),
             nguoiDungId: map['nguoi_dung_id'] ?? 0,
             lichPhongMayId: map['lich_phong_may_id'] ?? 0,
-            mayTinhId: map['may_tinh_id'] ?? 0,
+            mayTinhId: map['ma_may_tinh'] ?? map['may_tinh_id'] ?? 0,
           );
         }).toList();
       }
@@ -80,7 +80,7 @@ class AttendanceRepositoryImpl implements AttendanceRepository {
             id: map['id'] ?? 0,
             moTa: map['mo_ta'] ?? '',
             trangThai: map['trang_thai'] ?? 'CHO_XU_LY',
-            mayTinhId: map['may_tinh_id'] ?? 0,
+            mayTinhId: map['ma_may_tinh'] ?? map['may_tinh_id'] ?? 0,
             nguoiDungId: map['nguoi_dung_id'] ?? 0,
           );
         }).toList();

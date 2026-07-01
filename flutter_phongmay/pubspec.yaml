@@ -30,7 +30,7 @@ dependencies:
 
   # --- UI & TIỆN ÍCH CỦA APP MÌNH ---
   go_router: ^17.2.3          # Điều hướng
-  mobile_scanner: ^3.5.6      # Quét mã QR (Cực kỳ quan trọng)
+  mobile_scanner: ^7.2.0      # Quét mã QR (Cực kỳ quan trọng)
   intl: ^0.20.2               # Format ngày tháng
   elegant_notification: ^2.5.1 # Thông báo popup đẹp
   flutter_dotenv: ^5.0.2
@@ -39,6 +39,7 @@ dependencies:
   table_calendar: ^3.0.8
   supabase_flutter: ^1.4.0
   crypto: ^3.0.2
+  file_picker: ^3.0.4
 
 dev_dependencies:
   flutter_test:

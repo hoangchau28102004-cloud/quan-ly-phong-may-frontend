@@ -1,1112 +1,667 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_phongmay/data/datasources/api_service.dart';
-import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+import 'package:provider/provider.dart';
 
-class AcademicManagementScreen extends StatefulWidget {
+import '../../providers/academic_viewmodel.dart';
+import '../../../data/models/class_model.dart';
+import '../../../data/models/course_section_model.dart'; 
+import '../../../data/models/subject_model.dart';
+import '../../../data/datasources/api_service.dart';
+import '../../../data/repositories/academic_repository_impl.dart';
+
+import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+import 'class_detail_screen.dart'; 
+import 'course_section_detail_screen.dart'; 
+
+class AcademicManagementScreen extends StatelessWidget {
   const AcademicManagementScreen({super.key});
 
   @override
-  State<AcademicManagementScreen> createState() =>
-      _AcademicManagementScreenState();
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AcademicViewModel(
+        repository: AcademicRepositoryImpl(apiService: ApiService()),
+      ),
+      child: const AcademicManagementView(),
+    );
+  }
 }
 
-class _AcademicManagementScreenState extends State<AcademicManagementScreen> {
-  bool loading = true;
-  List<Map<String, dynamic>> subjects = [];
-  List<Map<String, dynamic>> sessions = [];
-  List<Map<String, dynamic>> classes = [];
-  List<Map<String, dynamic>> timeStructures = [];
+class AcademicManagementView extends StatelessWidget {
+  const AcademicManagementView({super.key});
 
   @override
-  void initState() {
-    super.initState();
-    _fetchAll();
-  }
-
-  Future<void> _fetchAll() async {
-    setState(() => loading = true);
-    try {
-      List<Map<String, dynamic>> s1 = [];
-      List<Map<String, dynamic>> s2 = [];
-      List<Map<String, dynamic>> s3 = [];
-      List<Map<String, dynamic>> s4 = [];
-
-      final res1 = await ApiService.get('/mon-hoc');
-      if (res1.statusCode == 200) {
-        final body = ApiService.decodeBody(res1);
-        if (body != null && body['success'] == true) {
-          s1 = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final res2 = await ApiService.get('/ca-hoc');
-      if (res2.statusCode == 200) {
-        final body = ApiService.decodeBody(res2);
-        if (body != null && body['success'] == true) {
-          s2 = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final res3 = await ApiService.get('/lop-hoc');
-      if (res3.statusCode == 200) {
-        final body = ApiService.decodeBody(res3);
-        if (body != null && body['success'] == true) {
-          s3 = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      final res4 = await ApiService.get(
-        '/cau-truc-cai-dat-thoi-gian?orderBy=nam_hoc&descending=true',
-      );
-      if (res4.statusCode == 200) {
-        final body = ApiService.decodeBody(res4);
-        if (body != null && body['success'] == true) {
-          s4 = List<Map<String, dynamic>>.from(body['data'] ?? []);
-        }
-      }
-
-      setState(() {
-        subjects = s1;
-        sessions = s2;
-        classes = s3;
-        timeStructures = s4;
-      });
-    } catch (e) {
-      // ignore errors for now
-    } finally {
-      setState(() => loading = false);
-    }
-  }
-
-  Future<void> _addSubject() async {
-    final nameController = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm Môn học'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(labelText: 'Tên môn'),
+  Widget build(BuildContext context) {
+    return AdminLayout(
+      title: 'Quản lý Học vụ',
+      child: Container(
+        color: const Color(0xFFF4F6F9), 
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
+            ),
+            child: DefaultTabController(
+              length: 3,
+              child: Column(
+                children: [
+                  const TabBar(
+                    labelColor: Color(0xFF0F3E99),
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Color(0xFF0F3E99),
+                    indicatorWeight: 3,
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                    tabs: [
+                      Tab(text: 'Lớp học'), 
+                      Tab(text: 'Lớp học phần'),
+                      Tab(text: 'Môn học'),
+                    ],
+                  ),
+                  const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
+                  
+                  const Expanded(
+                    child: TabBarView(
+                      children: [
+                        ClassListBody(),           
+                        CourseSectionListBody(),   
+                        SubjectListBody(),         
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              if (name.isEmpty) return;
-              try {
-                await ApiService.post('/mon-hoc', {'ten_mon': name});
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
       ),
     );
   }
+}
 
-  Future<void> _addSession() async {
-    final nameController = TextEditingController();
-    final startController = TextEditingController();
-    final endController = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm Ca học'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Tên ca'),
-            ),
-            TextField(
-              controller: startController,
-              decoration: const InputDecoration(
-                labelText: 'Giờ bắt đầu (HH:mm)',
-              ),
-            ),
-            TextField(
-              controller: endController,
-              decoration: const InputDecoration(
-                labelText: 'Giờ kết thúc (HH:mm)',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final name = nameController.text.trim();
-              final start = startController.text.trim();
-              final end = endController.text.trim();
-              if (name.isEmpty) return;
-              try {
-                await ApiService.post('/ca-hoc', {
-                  'ten_ca': name,
-                  'gio_bat_dau': start,
-                  'gio_ket_thuc': end,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
+// =========================================================================
+// --- TAB 1: DANH SÁCH LỚP HỌC ---
+// =========================================================================
+class ClassListBody extends StatefulWidget {
+  const ClassListBody({super.key});
+  @override
+  State<ClassListBody> createState() => _ClassListBodyState();
+}
 
-  Future<void> _addClass() async {
-    final maController = TextEditingController();
-    final nienController = TextEditingController();
-    final chuyenController = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm Lớp học'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: maController,
-              decoration: const InputDecoration(labelText: 'Mã lớp'),
-            ),
-            TextField(
-              controller: nienController,
-              decoration: const InputDecoration(labelText: 'Niên khóa'),
-            ),
-            TextField(
-              controller: chuyenController,
-              decoration: const InputDecoration(labelText: 'Chuyên ngành'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final ma = maController.text.trim();
-              final nien = nienController.text.trim();
-              final chuyen = chuyenController.text.trim();
-              if (ma.isEmpty) return;
-              try {
-                await ApiService.post('/lop-hoc', {
-                  'ma_lop': ma,
-                  'nien_khoa': nien,
-                  'chuyen_nganh': chuyen,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
+class _ClassListBodyState extends State<ClassListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
-  Future<void> _addTimeStructure() async {
-    final namController = TextEditingController();
-    final hocKyController = TextEditingController();
-    final soTuanController = TextEditingController();
-    final tuNgayController = TextEditingController();
-    final denNgayController = TextEditingController();
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Thêm Cấu trúc thời gian'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: namController,
-                decoration: const InputDecoration(
-                  labelText: 'Năm học (VD: 2026)',
-                ),
-              ),
-              TextField(
-                controller: hocKyController,
-                decoration: const InputDecoration(labelText: 'Học kỳ'),
-              ),
-              TextField(
-                controller: soTuanController,
-                decoration: const InputDecoration(labelText: 'Số tuần'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: tuNgayController,
-                decoration: const InputDecoration(
-                  labelText: 'Từ ngày (YYYY-MM-DD)',
-                ),
-              ),
-              TextField(
-                controller: denNgayController,
-                decoration: const InputDecoration(
-                  labelText: 'Đến ngày (YYYY-MM-DD)',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final nam = namController.text.trim();
-              final hocKy = hocKyController.text.trim();
-              final soTuan = int.tryParse(soTuanController.text.trim()) ?? 0;
-              final tu = tuNgayController.text.trim();
-              final den = denNgayController.text.trim();
-              if (nam.isEmpty) return;
-              try {
-                await ApiService.post('/cau-truc-cai-dat-thoi-gian', {
-                  'nam_hoc': nam,
-                  'hoc_ky': hocKy,
-                  'so_tuan': soTuan,
-                  'tu_ngay': tu,
-                  'den_ngay': den,
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _editSubject(Map<String, dynamic> s) async {
-    final id = s['id'];
-    if (id == null) return;
-    final nameController = TextEditingController(
-      text: s['ten_mon']?.toString() ?? '',
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa Môn học'),
-        content: TextField(
-          controller: nameController,
-          decoration: const InputDecoration(labelText: 'Tên môn'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/mon-hoc/$id', {
-                  'ten_mon': nameController.text.trim(),
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteSubject(Map<String, dynamic> s) async {
-    final id = s['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa môn học này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/mon-hoc/$id');
-    } catch (_) {}
-    await _fetchAll();
-  }
-
-  Future<void> _editSession(Map<String, dynamic> s) async {
-    final id = s['id'];
-    if (id == null) return;
-    final nameController = TextEditingController(
-      text: s['ten_ca']?.toString() ?? '',
-    );
-    final startController = TextEditingController(
-      text: s['gio_bat_dau']?.toString() ?? '',
-    );
-    final endController = TextEditingController(
-      text: s['gio_ket_thuc']?.toString() ?? '',
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa Ca học'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Tên ca'),
-            ),
-            TextField(
-              controller: startController,
-              decoration: const InputDecoration(
-                labelText: 'Giờ bắt đầu (HH:mm)',
-              ),
-            ),
-            TextField(
-              controller: endController,
-              decoration: const InputDecoration(
-                labelText: 'Giờ kết thúc (HH:mm)',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/ca-hoc/$id', {
-                  'ten_ca': nameController.text.trim(),
-                  'gio_bat_dau': startController.text.trim(),
-                  'gio_ket_thuc': endController.text.trim(),
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteSession(Map<String, dynamic> s) async {
-    final id = s['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa ca học này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/ca-hoc/$id');
-    } catch (_) {}
-    await _fetchAll();
-  }
-
-  Future<void> _editClass(Map<String, dynamic> c) async {
-    final id = c['id'];
-    if (id == null) return;
-    final maController = TextEditingController(
-      text: c['ma_lop']?.toString() ?? '',
-    );
-    final nienController = TextEditingController(
-      text: c['nien_khoa']?.toString() ?? '',
-    );
-    final chuyenController = TextEditingController(
-      text: c['chuyen_nganh']?.toString() ?? '',
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa Lớp học'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: maController,
-              decoration: const InputDecoration(labelText: 'Mã lớp'),
-            ),
-            TextField(
-              controller: nienController,
-              decoration: const InputDecoration(labelText: 'Niên khóa'),
-            ),
-            TextField(
-              controller: chuyenController,
-              decoration: const InputDecoration(labelText: 'Chuyên ngành'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/lop-hoc/$id', {
-                  'ma_lop': maController.text.trim(),
-                  'nien_khoa': nienController.text.trim(),
-                  'chuyen_nganh': chuyenController.text.trim(),
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteClass(Map<String, dynamic> c) async {
-    final id = c['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa lớp học này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/lop-hoc/$id');
-    } catch (_) {}
-    await _fetchAll();
-  }
-
-  Future<void> _editTimeStructure(Map<String, dynamic> t) async {
-    final id = t['id'];
-    if (id == null) return;
-    final namController = TextEditingController(
-      text: t['nam_hoc']?.toString() ?? '',
-    );
-    final hocKyController = TextEditingController(
-      text: t['hoc_ky']?.toString() ?? '',
-    );
-    final soTuanController = TextEditingController(
-      text: t['so_tuan']?.toString() ?? '',
-    );
-    final tuNgayController = TextEditingController(
-      text: t['tu_ngay']?.toString() ?? '',
-    );
-    final denNgayController = TextEditingController(
-      text: t['den_ngay']?.toString() ?? '',
-    );
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Chỉnh sửa Cấu trúc thời gian'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: namController,
-                decoration: const InputDecoration(
-                  labelText: 'Năm học (VD: 2026)',
-                ),
-              ),
-              TextField(
-                controller: hocKyController,
-                decoration: const InputDecoration(labelText: 'Học kỳ'),
-              ),
-              TextField(
-                controller: soTuanController,
-                decoration: const InputDecoration(labelText: 'Số tuần'),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: tuNgayController,
-                decoration: const InputDecoration(
-                  labelText: 'Từ ngày (YYYY-MM-DD)',
-                ),
-              ),
-              TextField(
-                controller: denNgayController,
-                decoration: const InputDecoration(
-                  labelText: 'Đến ngày (YYYY-MM-DD)',
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Hủy'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              try {
-                await ApiService.put('/cau-truc-cai-dat-thoi-gian/$id', {
-                  'nam_hoc': namController.text.trim(),
-                  'hoc_ky': hocKyController.text.trim(),
-                  'so_tuan': int.tryParse(soTuanController.text.trim()) ?? 0,
-                  'tu_ngay': tuNgayController.text.trim(),
-                  'den_ngay': denNgayController.text.trim(),
-                });
-              } catch (_) {}
-              Navigator.of(ctx).pop();
-              await _fetchAll();
-            },
-            child: const Text('Lưu'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Future<void> _deleteTimeStructure(Map<String, dynamic> t) async {
-    final id = t['id'];
-    if (id == null) return;
-    final ok =
-        await showDialog<bool>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: const Text('Xác nhận'),
-            content: const Text('Bạn có chắc muốn xóa cấu trúc này?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: const Text('Hủy'),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: const Text('Xóa'),
-              ),
-            ],
-          ),
-        ) ??
-        false;
-    if (!ok) return;
-    try {
-      await ApiService.delete('/cau-truc-cai-dat-thoi-gian/$id');
-    } catch (_) {}
-    await _fetchAll();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: AdminLayout(
-        title: 'Quản lý Học vụ',
-        child: loading
-            ? const Center(child: CircularProgressIndicator())
-            : Container(
-                padding: const EdgeInsets.all(18.0),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 8),
-                    TabBar(
-                      labelColor: Theme.of(context).primaryColor,
-                      unselectedLabelColor: Colors.black87,
-                      indicatorColor: Theme.of(context).primaryColor,
-                      tabs: const [
-                        Tab(text: 'Môn học'),
-                        Tab(text: 'Ca học'),
-                        Tab(text: 'Lớp học'),
-                        Tab(text: 'Cấu trúc thời gian'),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Expanded(
-                      child: TabBarView(
-                        children: [
-                          _buildSubjectsTab(),
-                          _buildSessionsTab(),
-                          _buildClassesTab(),
-                          _buildTimeStructuresTab(),
-                        ],
-                      ),
-                    ),
-                  ],
+    final viewModel = context.watch<AcademicViewModel>();
+    if (viewModel.isLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0F3E99)));
+
+    final displayedClasses = viewModel.classes.where((c) {
+      final query = _searchQuery.toLowerCase();
+      return c.maLop.toLowerCase().contains(query) || c.nienKhoa.toLowerCase().contains(query) || c.chuyenNganh.toLowerCase().contains(query) || (c.tenGiangVien?.toLowerCase().contains(query) ?? false);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(hintText: 'Tìm mã lớp, niên khóa, GVCN...', prefixIcon: const Icon(Icons.search, color: Colors.grey), contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0F3E99)))),
                 ),
               ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => _showClassBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text('Thêm lớp', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), elevation: 0),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchInitialData(),
+            child: displayedClasses.isEmpty 
+              ? const Center(child: Text('Không tìm thấy lớp học nào.', style: TextStyle(color: Colors.grey, fontSize: 16)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: displayedClasses.length,
+                  itemBuilder: (context, index) {
+                    return _buildListItemCard(context, viewModel, displayedClasses[index]);
+                  },
+              ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListItemCard(BuildContext context, AcademicViewModel viewModel, ClassModel classItem) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(color: const Color(0xFFFAFAFB), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
+      child: ListTile(
+        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (ctx) => ChangeNotifierProvider.value(value: viewModel, child: ClassDetailScreen(classItem: classItem)))),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        leading: Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFFE8EAF6), borderRadius: BorderRadius.circular(8)), child: const Icon(Icons.class_, color: Color(0xFF0F3E99), size: 24)),
+        title: Text(classItem.maLop, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87)),
+        subtitle: Padding(padding: const EdgeInsets.only(top: 4.0), child: Text('Khóa: ${classItem.nienKhoa} • ${classItem.chuyenNganh}\nGVCN: ${classItem.tenGiangVien ?? "Chưa phân công"} • SV: ${classItem.soSinhVien}', style: TextStyle(color: Colors.grey[600], fontSize: 13, height: 1.4))),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(icon: const Icon(Icons.edit, color: Colors.grey), onPressed: () => _showClassBottomSheet(context, viewModel, classItem)),
+            Container(margin: const EdgeInsets.only(left: 4), decoration: BoxDecoration(color: const Color(0xFFFF5C5C), borderRadius: BorderRadius.circular(8)), child: IconButton(icon: const Icon(Icons.delete, color: Colors.white, size: 20), onPressed: () => _showDeleteConfirm(context, viewModel, classItem))),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildSubjectsTab() {
+  void _showClassBottomSheet(BuildContext context, AcademicViewModel viewModel, ClassModel? existingClass) {
+    final isEdit = existingClass != null;
+    final maLopCtrl = TextEditingController(text: existingClass?.maLop ?? '');
+    final nienKhoaCtrl = TextEditingController(text: existingClass?.nienKhoa ?? '');
+    final chuyenNganhCtrl = TextEditingController(text: existingClass?.chuyenNganh ?? '');
+    int? selectedTeacherId = existingClass?.maGiangVien;
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(isEdit ? 'Cập nhật Lớp học' : 'Thêm Lớp học mới', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3E99)), textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  TextField(controller: maLopCtrl, decoration: InputDecoration(labelText: 'Mã Lớp', hintText: 'VD: CDTH22A', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), readOnly: isEdit),
+                  const SizedBox(height: 16),
+                  TextField(controller: nienKhoaCtrl, decoration: InputDecoration(labelText: 'Niên khóa', hintText: 'VD: 2022-2025', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 16),
+                  TextField(controller: chuyenNganhCtrl, decoration: InputDecoration(labelText: 'Chuyên ngành', hintText: 'VD: CNTT', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 16),
+                  DropdownButtonFormField<int>(initialValue: selectedTeacherId, decoration: InputDecoration(labelText: 'Giảng viên chủ nhiệm', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: viewModel.teachers.map((t) => DropdownMenuItem(value: t.id, child: Text(t.hoTen))).toList(), onChanged: (val) => setState(() => selectedTeacherId = val)),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    onPressed: () async {
+                      final newData = ClassModel(id: existingClass?.id ?? 0, maLop: maLopCtrl.text, nienKhoa: nienKhoaCtrl.text, chuyenNganh: chuyenNganhCtrl.text, maGiangVien: selectedTeacherId, soSinhVien: existingClass?.soSinhVien ?? 0);
+                      final messenger = ScaffoldMessenger.of(context);
+                      final success = await viewModel.saveClass(existingClass?.id, newData);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) messenger.showSnackBar(SnackBar(content: Text(isEdit ? 'Cập nhật thành công!' : 'Thêm lớp thành công!'), backgroundColor: Colors.green));
+                    },
+                    child: Text(isEdit ? 'LƯU THAY ĐỔI' : 'TẠO LỚP MỚI', style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(BuildContext context, AcademicViewModel viewModel, ClassModel classItem) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn xóa lớp ${classItem.maLop} không?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context); 
+              final success = await viewModel.deleteClass(classItem.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx); 
+              if (success) messenger.showSnackBar(const SnackBar(content: Text('Xóa lớp thành công!'), backgroundColor: Colors.green));
+            },
+            child: const Text('Xóa ngay', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 2: DANH SÁCH LỚP HỌC PHẦN ---
+// =========================================================================
+class CourseSectionListBody extends StatefulWidget {
+  const CourseSectionListBody({super.key});
+  @override
+  State<CourseSectionListBody> createState() => _CourseSectionListBodyState();
+}
+
+class _CourseSectionListBodyState extends State<CourseSectionListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) { context.read<AcademicViewModel>().fetchCourseSections(); });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AcademicViewModel>();
+    if (viewModel.isSectionLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0F3E99)));
+
+    final displayedItems = viewModel.courseSections.where((c) {
+      final q = _searchQuery.toLowerCase();
+      return c.maLopHocPhan.toLowerCase().contains(q) || (c.tenMon?.toLowerCase().contains(q) ?? false);
+    }).toList();
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _addSubject,
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm môn học'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 900;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : MediaQuery.of(context).size.width,
-                  ),
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      columns: isCompact
-                          ? const [
-                              DataColumn(label: Text('Tên môn')),
-                              DataColumn(label: Text('Hành động')),
-                            ]
-                          : const [
-                              DataColumn(label: Text('Tên môn')),
-                              DataColumn(label: Text('Loại')),
-                              DataColumn(label: Text('Tín chỉ')),
-                              DataColumn(label: Text('Hành động')),
-                            ],
-                      rows: subjects.map((s) {
-                        if (isCompact) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(s['ten_mon']?.toString() ?? '-')),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editSubject(s),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteSubject(s),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(s['ten_mon']?.toString() ?? '-')),
-                            DataCell(Text(s['loai']?.toString() ?? '-')),
-                            DataCell(Text(s['tin_chi']?.toString() ?? '-')),
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _editSubject(s),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _deleteSubject(s),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController, onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(hintText: 'Tìm Lớp học phần, môn...', prefixIcon: const Icon(Icons.search, color: Colors.grey), contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16), border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0F3E99)))),
                 ),
-              );
-            },
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => _showCourseSectionBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18), label: const Text('Thêm mới', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), elevation: 0),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchCourseSections(),
+            child: displayedItems.isEmpty 
+              ? const Center(child: Text('Không tìm thấy lớp học phần nào.', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: displayedItems.length,
+                  itemBuilder: (context, index) => _buildCourseSectionCard(context, viewModel, displayedItems[index]),
+                ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSessionsTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _addSession,
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm ca học'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+  Widget _buildCourseSectionCard(BuildContext context, AcademicViewModel viewModel, CourseSectionModel item) {
+    bool isActive = item.trangThai.toLowerCase().contains('hoạt động') || item.trangThai.toLowerCase() == 'active';
+    return GestureDetector(
+      onTap: () => Navigator.push(context, MaterialPageRoute(builder: (ctx) => ChangeNotifierProvider.value(value: viewModel, child: CourseSectionDetailScreen(sectionItem: item)))),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))]),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(children: [Container(padding: const EdgeInsets.all(6), decoration: BoxDecoration(color: const Color(0xFFE8EAF6), borderRadius: BorderRadius.circular(6)), child: const Icon(Icons.library_books, color: Color(0xFF0F3E99), size: 18)), const SizedBox(width: 8), Text(item.maLopHocPhan, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.black87))]),
+                  Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: isActive ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(20), border: Border.all(color: isActive ? Colors.green.shade200 : Colors.red.shade200)), child: Text(item.trangThai.toUpperCase(), style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: isActive ? Colors.green.shade700 : Colors.red.shade700))),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 12), const Divider(height: 1, color: Color(0xFFEEEEEE)), const SizedBox(height: 12),
+              Text('Môn: ${item.tenMon ?? "N/A"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0F3E99))),
+              const SizedBox(height: 6),
+              Row(children: [const Icon(Icons.calendar_today, size: 14, color: Colors.grey), const SizedBox(width: 4), Text(item.tenNamHoc ?? "N/A", style: const TextStyle(fontSize: 12, color: Colors.black87)), const Spacer(), const Icon(Icons.room, size: 14, color: Colors.grey), const SizedBox(width: 4), Text(item.tenPhong ?? "Chưa xếp", style: const TextStyle(fontSize: 12, color: Colors.black87)), const Spacer(), const Icon(Icons.people, size: 14, color: Colors.grey), const SizedBox(width: 4), Text('${item.soSinhVien} / ${item.siSoToiDa}', style: const TextStyle(fontSize: 12, color: Colors.black87))]),
+              const SizedBox(height: 6),
+              Row(children: [const Icon(Icons.person, size: 14, color: Colors.grey), const SizedBox(width: 4), Text('GV: ${item.tenGiangVien ?? "Chưa phân công"}', style: TextStyle(fontSize: 12, fontStyle: FontStyle.italic, color: Colors.grey.shade700))]),
+              const SizedBox(height: 12), const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [TextButton.icon(onPressed: () => _showCourseSectionBottomSheet(context, viewModel, item), icon: const Icon(Icons.edit, size: 16, color: Colors.orange), label: const Text('Sửa', style: TextStyle(color: Colors.orange))), TextButton.icon(onPressed: () => _showDeleteConfirm(context, viewModel, item), icon: const Icon(Icons.delete, size: 16, color: Colors.red), label: const Text('Xóa', style: TextStyle(color: Colors.red)))]),
+            ],
+          ),
         ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 900;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : MediaQuery.of(context).size.width,
-                  ),
+      ),
+    );
+  }
+
+  void _showCourseSectionBottomSheet(BuildContext context, AcademicViewModel viewModel, CourseSectionModel? existingItem) {
+    final isEdit = existingItem != null;
+    final maLopHocPhanCtrl = TextEditingController(text: existingItem?.maLopHocPhan ?? '');
+    int? selectedMon = (existingItem?.maMon != null && viewModel.subjects.any((m) => m['id'] == existingItem!.maMon)) ? existingItem?.maMon : null;
+    int? selectedNam = (existingItem?.maNamHoc != null && viewModel.academicYears.any((n) => n['id'] == existingItem!.maNamHoc)) ? existingItem?.maNamHoc : null;
+    int? selectedPhong = (existingItem?.maPhong != null && viewModel.rooms.any((p) => p['id'] == existingItem!.maPhong)) ? existingItem?.maPhong : null;
+    int? selectedTeacher = existingItem?.maGiangVien; 
+    final siSoCtrl = TextEditingController(text: existingItem?.siSoToiDa.toString() ?? '40');
+    
+    String normalizeTrangThai(String? tt) {
+      if (tt == null) return 'Hoạt động';
+      final lower = tt.toLowerCase();
+      if (lower == 'active' || lower.contains('hoạt động') || lower.contains('hoat dong')) return 'Hoạt động';
+      return 'Đã khóa';
+    }
+    String selectedTrangThai = normalizeTrangThai(existingItem?.trangThai);
+    final ghiChuCtrl = TextEditingController(text: existingItem?.ghiChu ?? '');
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.85, 
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 24),
+            child: Column(
+              children: [
+                Text(isEdit ? 'Cập nhật Lớp học phần' : 'Thêm Lớp học phần mới', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3E99))),
+                const SizedBox(height: 24),
+                Expanded(
                   child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      columns: isCompact
-                          ? const [
-                              DataColumn(label: Text('Tên ca')),
-                              DataColumn(label: Text('Hành động')),
-                            ]
-                          : const [
-                              DataColumn(label: Text('Tên ca')),
-                              DataColumn(label: Text('Giờ bắt đầu')),
-                              DataColumn(label: Text('Giờ kết thúc')),
-                              DataColumn(label: Text('Hành động')),
-                            ],
-                      rows: sessions.map((s) {
-                        if (isCompact) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(s['ten_ca']?.toString() ?? '-')),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editSession(s),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteSession(s),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(s['ten_ca']?.toString() ?? '-')),
-                            DataCell(Text(s['gio_bat_dau']?.toString() ?? '-')),
-                            DataCell(
-                              Text(s['gio_ket_thuc']?.toString() ?? '-'),
-                            ),
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _editSession(s),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _deleteSession(s),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(children: [Expanded(child: TextField(controller: maLopHocPhanCtrl, decoration: InputDecoration(labelText: 'Mã LHP', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), readOnly: isEdit)), const SizedBox(width: 12), Expanded(child: DropdownButtonFormField<int>(initialValue: selectedMon, decoration: InputDecoration(labelText: 'Môn học', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: viewModel.subjects.map((m) => DropdownMenuItem<int>(value: m['id'], child: Text(m['ten_mon'], overflow: TextOverflow.ellipsis))).toList(), onChanged: (val) => setState(() => selectedMon = val)))]),
+                        const SizedBox(height: 16),
+                        Row(children: [Expanded(child: DropdownButtonFormField<int>(initialValue: selectedNam, decoration: InputDecoration(labelText: 'Năm học', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: viewModel.academicYears.map((n) => DropdownMenuItem<int>(value: n['id'], child: Text(n['ten_nam_hoc']?.toString() ?? n['nam_hoc']?.toString() ?? 'N/A'))).toList(), onChanged: (val) => setState(() => selectedNam = val))), const SizedBox(width: 12), Expanded(child: DropdownButtonFormField<int>(initialValue: selectedTeacher, decoration: InputDecoration(labelText: 'Giảng viên', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: viewModel.teachers.map((t) => DropdownMenuItem<int>(value: t.id, child: Text(t.hoTen, overflow: TextOverflow.ellipsis))).toList(), onChanged: (val) => setState(() => selectedTeacher = val), hint: const Text('Chưa phân công')))]),
+                        const SizedBox(height: 16),
+                        Row(children: [Expanded(child: DropdownButtonFormField<int>(initialValue: selectedPhong, decoration: InputDecoration(labelText: 'Phòng', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: viewModel.rooms.map((p) => DropdownMenuItem<int>(value: p['id'], child: Text(p['ten_phong']))).toList(), onChanged: (val) => setState(() => selectedPhong = val))), const SizedBox(width: 12), Expanded(child: TextField(controller: siSoCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Sĩ số tối đa', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))))]),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(initialValue: selectedTrangThai, decoration: InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), items: const [DropdownMenuItem(value: 'Hoạt động', child: Text('Hoạt động')), DropdownMenuItem(value: 'Đã khóa', child: Text('Đã khóa'))], onChanged: (val) => setState(() => selectedTrangThai = val ?? 'Hoạt động')),
+                        const SizedBox(height: 16),
+                        TextField(controller: ghiChuCtrl, maxLines: 3, decoration: InputDecoration(labelText: 'Ghi chú', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                        const SizedBox(height: 32),
+                      ],
                     ),
                   ),
                 ),
-              );
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  onPressed: () async {
+                    if (maLopHocPhanCtrl.text.isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập Mã Lớp Học Phần'))); return; }
+                    final newData = CourseSectionModel(id: existingItem?.id ?? 0, maLopHocPhan: maLopHocPhanCtrl.text, maMon: selectedMon, maNamHoc: selectedNam, maPhong: selectedPhong, maGiangVien: selectedTeacher, siSoToiDa: int.tryParse(siSoCtrl.text) ?? 40, soSinhVien: existingItem?.soSinhVien ?? 0, trangThai: selectedTrangThai, ghiChu: ghiChuCtrl.text);
+                    final messenger = ScaffoldMessenger.of(context);
+                    final success = await viewModel.saveCourseSection(existingItem?.id, newData);
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    if (success) messenger.showSnackBar(const SnackBar(content: Text('Đã lưu lớp học phần!'), backgroundColor: Colors.green));
+                  },
+                  child: const Text('LƯU LỚP HỌC PHẦN', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        }
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(BuildContext context, AcademicViewModel viewModel, CourseSectionModel item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn xóa Lớp học phần ${item.maLopHocPhan} không?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await viewModel.deleteCourseSection(item.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx); 
+              if (success) messenger.showSnackBar(const SnackBar(content: Text('Xóa thành công!'), backgroundColor: Colors.green));
             },
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 3: DANH SÁCH MÔN HỌC ---
+// =========================================================================
+class SubjectListBody extends StatefulWidget {
+  const SubjectListBody({super.key});
+  @override
+  State<SubjectListBody> createState() => _SubjectListBodyState();
+}
+
+class _SubjectListBodyState extends State<SubjectListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AcademicViewModel>().fetchSubjectsData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AcademicViewModel>();
+
+    if (viewModel.isSubjectLoading) return const Center(child: CircularProgressIndicator(color: Color(0xFF0F3E99)));
+
+    final displayedItems = viewModel.listMonHoc.where((m) {
+      final q = _searchQuery.toLowerCase();
+      return m.tenMon.toLowerCase().contains(q) || m.maMonHoc.toLowerCase().contains(q);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm mã môn, tên môn...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: const BorderSide(color: Color(0xFF0F3E99))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () => _showSubjectBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text('Thêm môn', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)), padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16), elevation: 0),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchSubjectsData(),
+            child: displayedItems.isEmpty 
+              ? const Center(child: Text('Không tìm thấy môn học nào.', style: TextStyle(color: Colors.grey)))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: displayedItems.length,
+                  itemBuilder: (context, index) => _buildSubjectCard(context, viewModel, displayedItems[index]),
+                ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildClassesTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
+  Widget _buildSubjectCard(BuildContext context, AcademicViewModel viewModel, SubjectModel item) {
+    return Card(
+      elevation: 0, margin: const EdgeInsets.only(bottom: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
           children: [
-            ElevatedButton.icon(
-              onPressed: _addClass,
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm lớp học'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+            Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFE8EAF6), borderRadius: BorderRadius.circular(10)), child: const Icon(Icons.menu_book, color: Color(0xFF0F3E99))),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('[${item.maMonHoc}] ${item.tenMon}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Colors.black87)),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(6), border: Border.all(color: Colors.orange.shade200)), child: Text(item.loaiMon, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.orange.shade800))),
+                      const SizedBox(width: 8),
+                      Text('${item.soTinChi} Tín chỉ', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                    ],
+                  ),
+                ],
               ),
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(icon: const Icon(Icons.edit, color: Colors.orange, size: 20), onPressed: () => _showSubjectBottomSheet(context, viewModel, item)),
+                IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20), onPressed: () => _showDeleteSubjectConfirm(context, viewModel, item)),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 900;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : MediaQuery.of(context).size.width,
-                  ),
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      columns: isCompact
-                          ? const [
-                              DataColumn(label: Text('Mã lớp')),
-                              DataColumn(label: Text('Hành động')),
-                            ]
-                          : const [
-                              DataColumn(label: Text('Mã lớp')),
-                              DataColumn(label: Text('Niên khóa')),
-                              DataColumn(label: Text('Chuyên ngành')),
-                              DataColumn(label: Text('Hành động')),
-                            ],
-                      rows: classes.map((c) {
-                        if (isCompact) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(c['ma_lop']?.toString() ?? '-')),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editClass(c),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteClass(c),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(c['ma_lop']?.toString() ?? '-')),
-                            DataCell(Text(c['nien_khoa']?.toString() ?? '-')),
-                            DataCell(
-                              Text(c['chuyen_nganh']?.toString() ?? '-'),
-                            ),
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _editClass(c),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _deleteClass(c),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 
-  Widget _buildTimeStructuresTab() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            ElevatedButton.icon(
-              onPressed: _addTimeStructure,
-              icon: const Icon(Icons.add),
-              label: const Text('Thêm cấu trúc'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
+  void _showSubjectBottomSheet(BuildContext context, AcademicViewModel viewModel, SubjectModel? existingItem) {
+    final isEdit = existingItem != null;
+    final maMonCtrl = TextEditingController(text: existingItem?.maMonHoc ?? '');
+    final tenMonCtrl = TextEditingController(text: existingItem?.tenMon ?? '');
+    final soTinChiCtrl = TextEditingController(text: existingItem?.soTinChi.toString() ?? '3');
+    String selectedLoai = (existingItem?.loaiMon == 'Chuyên ngành') ? 'Chuyên ngành' : 'Cơ sở';
+    final moTaCtrl = TextEditingController(text: existingItem?.moTa ?? '');
+
+    showModalBottomSheet(
+      context: context, isScrollControlled: true, backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom, left: 20, right: 20, top: 24),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(isEdit ? 'Cập nhật Môn học' : 'Thêm Môn học mới', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF0F3E99)), textAlign: TextAlign.center),
+                  const SizedBox(height: 24),
+                  TextField(controller: maMonCtrl, decoration: InputDecoration(labelText: 'Mã môn học', hintText: 'VD: MH001', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))), readOnly: isEdit),
+                  const SizedBox(height: 16),
+                  TextField(controller: tenMonCtrl, decoration: InputDecoration(labelText: 'Tên môn học', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          initialValue: selectedLoai, decoration: InputDecoration(labelText: 'Loại môn', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+                          items: const [DropdownMenuItem(value: 'Cơ sở', child: Text('Cơ sở')), DropdownMenuItem(value: 'Chuyên ngành', child: Text('Chuyên ngành'))],
+                          onChanged: (val) => setState(() => selectedLoai = val!),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(child: TextField(controller: soTinChiCtrl, keyboardType: TextInputType.number, decoration: InputDecoration(labelText: 'Số tín chỉ', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))))),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(controller: moTaCtrl, maxLines: 3, decoration: InputDecoration(labelText: 'Mô tả (Tùy chọn)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)))),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0F3E99), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    onPressed: () async {
+                      if (maMonCtrl.text.trim().isEmpty || tenMonCtrl.text.trim().isEmpty) { ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng nhập Mã và Tên môn học!'))); return; }
+                      final newData = SubjectModel(id: existingItem?.id ?? 0, maMonHoc: maMonCtrl.text.trim(), tenMon: tenMonCtrl.text.trim(), loaiMon: selectedLoai, soTinChi: int.tryParse(soTinChiCtrl.text) ?? 3, moTa: moTaCtrl.text.trim());
+                      final messenger = ScaffoldMessenger.of(context);
+                      final success = await viewModel.saveSubject(existingItem?.id, newData);
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) { messenger.showSnackBar(const SnackBar(content: Text('Đã lưu môn học!'), backgroundColor: Colors.green)); } 
+                      else { messenger.showSnackBar(SnackBar(content: Text('Lỗi: ${viewModel.errorMessage}'), backgroundColor: Colors.redAccent)); }
+                    },
+                    child: const Text('LƯU MÔN HỌC', style: TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isCompact = constraints.maxWidth < 900;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    minWidth: constraints.maxWidth.isFinite
-                        ? constraints.maxWidth
-                        : MediaQuery.of(context).size.width,
-                  ),
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columnSpacing: 24,
-                      columns: isCompact
-                          ? const [
-                              DataColumn(label: Text('Năm học')),
-                              DataColumn(label: Text('Hành động')),
-                            ]
-                          : const [
-                              DataColumn(label: Text('Năm học')),
-                              DataColumn(label: Text('Học kỳ')),
-                              DataColumn(label: Text('Số tuần')),
-                              DataColumn(label: Text('Từ ngày')),
-                              DataColumn(label: Text('Đến ngày')),
-                              DataColumn(label: Text('Hành động')),
-                            ],
-                      rows: timeStructures.map((t) {
-                        if (isCompact) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(t['nam_hoc']?.toString() ?? '-')),
-                              DataCell(
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(Icons.edit),
-                                      onPressed: () => _editTimeStructure(t),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(Icons.delete_outline),
-                                      onPressed: () => _deleteTimeStructure(t),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(t['nam_hoc']?.toString() ?? '-')),
-                            DataCell(Text(t['hoc_ky']?.toString() ?? '-')),
-                            DataCell(Text(t['so_tuan']?.toString() ?? '-')),
-                            DataCell(Text(t['tu_ngay']?.toString() ?? '-')),
-                            DataCell(Text(t['den_ngay']?.toString() ?? '-')),
-                            DataCell(
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.edit),
-                                    onPressed: () => _editTimeStructure(t),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete_outline),
-                                    onPressed: () => _deleteTimeStructure(t),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                ),
-              );
+          );
+        }
+      ),
+    );
+  }
+
+  void _showDeleteSubjectConfirm(BuildContext context, AcademicViewModel viewModel, SubjectModel item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+        content: Text('Bạn có chắc chắn muốn xóa môn [${item.maMonHoc}] ${item.tenMon} không?\n\nLưu ý: Nếu môn này đang được sử dụng ở Lớp học phần, việc xóa sẽ bị từ chối.', style: const TextStyle(height: 1.4)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Hủy', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await viewModel.deleteSubject(item.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              if (success) { messenger.showSnackBar(const SnackBar(content: Text('Xóa môn học thành công!'), backgroundColor: Colors.green)); } 
+              else { messenger.showSnackBar(const SnackBar(content: Text('Xóa thất bại: Môn học đang được sử dụng!'), backgroundColor: Colors.redAccent)); }
             },
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
