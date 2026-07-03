@@ -9,6 +9,7 @@ import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'
 import 'package:flutter_phongmay/presentation/providers/user_viewmodel.dart';
 import 'package:flutter_phongmay/data/repositories/user_repository_impl.dart';
 import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/providers/issue_viewmodel.dart';
 // ---> ĐÃ THÊM IMPORT CHO IMPORT_VIEWMODEL Ở ĐÂY <---
 import 'package:flutter_phongmay/presentation/providers/import_viewmodel.dart';
 
@@ -21,6 +22,7 @@ import 'package:flutter_phongmay/presentation/screens/admin/academic_management.
 import 'package:flutter_phongmay/presentation/screens/admin/asset_lab_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/incident_maintenance_management.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/scheduling_management.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/transfer_machine_screen.dart';
@@ -55,6 +57,7 @@ void main() async {
         ),
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
+        ChangeNotifierProvider(create: (_) => IssueViewModel()),
       ],
       child: const MyApp(),
     ),
@@ -82,13 +85,15 @@ class MyApp extends StatelessWidget {
         '/admin/users': (context) => const UserManagementScreen(),
         '/admin/academic': (context) => const AcademicManagementScreen(),
         '/admin/assets': (context) => const AssetLabManagementScreen(),
-        '/admin/incidents': (context) => const IncidentMaintenanceManagementScreen(),
+        '/admin/incidents': (context) =>
+            const IncidentMaintenanceManagementScreen(),
         '/admin/scheduling': (context) => const SchedulingManagementScreen(),
-        '/lecturer_home': (context) => const LecturerHomeScreen(),
+        '/lecturer_home': (context) => const TeacherHome(),
         '/scanner': (context) => const QRScannerScreen(),
         '/admin/import-machine': (context) => const ImportMachineScreen(),
         '/admin/transfer': (context) => const TransferMachineScreen(),
-        '/admin/borrow-return': (context) => const BorrowReturnManagementScreen(),
+        '/admin/borrow-return': (context) =>
+            const BorrowReturnManagementScreen(),
         '/admin/scan-qr': (context) => const AdminRoomsScreen(),
       },
     );

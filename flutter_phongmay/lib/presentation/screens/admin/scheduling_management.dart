@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:file_picker/file_picker.dart'; // THƯ VIỆN CHỌN FILE
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
-import 'package:flutter_phongmay/presentation/screens/layout/responsive_layout.dart';
 
 class SchedulingManagementScreen extends StatefulWidget {
   const SchedulingManagementScreen({super.key});
@@ -19,7 +18,7 @@ class _SchedulingManagementScreenState
   List<dynamic> rooms = [];
   List<dynamic> schedules = [];
   List<dynamic> bookingRequests = [];
-  List<dynamic> modules = []; // Danh sách Lớp học phần
+  List<dynamic> modules = [];
 
   // STATE CHO CHẾ ĐỘ THỜI KHÓA BIỂU
   bool _isGridView = true;
@@ -35,8 +34,8 @@ class _SchedulingManagementScreenState
   Future<void> _loadData() async {
     setState(() => isLoading = true);
     try {
-      final sRes = await ApiService.get('/lich-phong');
-      final bRes = await ApiService.get('/dat-phong');
+      final sRes = await ApiService.get('/schedule/lich-phong');
+      final bRes = await ApiService.get('/schedule/dat-phong');
       final rRes = await ApiService.get('/phong-may');
 
       dynamic mRes;
@@ -47,7 +46,6 @@ class _SchedulingManagementScreenState
       }
 
       setState(() {
-        // FIX LỖI DARTX.MAP: Ép kiểu tuyệt đối an toàn
         final sBody = ApiService.decodeBody(sRes);
         final bBody = ApiService.decodeBody(bRes);
         final rBody = ApiService.decodeBody(rRes);
@@ -71,7 +69,10 @@ class _SchedulingManagementScreenState
 
   Future<void> _updateBookingStatus(int id, String status) async {
     try {
-      final res = await ApiService.put('/dat-phong/$id', {'trang_thai_duyet': status});
+      final res = await ApiService.put('/schedule/dat-phong/$id', {'trang_thai_duyet': status});
+      final resBody = ApiService.decodeBody(res);
+      
+      // 🚀 FIX: Bắt lỗi gắt gao khi Duyệt/Từ chối
       if (res.statusCode == 200 || res.statusCode == 201) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -81,9 +82,16 @@ class _SchedulingManagementScreenState
           );
         }
         _loadData();
+      } else {
+         String errorMsg = resBody?['message']?.toString() ?? 'Lỗi từ Server (Mã: ${res.statusCode})';
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('Xử lý thất bại: $errorMsg'), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
+           );
+         }
       }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi sập mạng: $e'), backgroundColor: Colors.red));
     }
   }
 
@@ -127,9 +135,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // ========================================================
-  // 1. TAB LỊCH SỬ DỤNG PHÒNG
-  // ========================================================
   Widget _buildSchedulesTab() {
     return Column(
       children: [
@@ -182,7 +187,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // --- COMPONENT TOOLBAR ---
   Widget _buildWeekNavigator() {
     DateTime monday = _currentWeekDate.subtract(Duration(days: _currentWeekDate.weekday - 1));
     DateTime sunday = monday.add(const Duration(days: 6));
@@ -205,7 +209,6 @@ class _SchedulingManagementScreenState
   }
 
   Widget _buildRoomSelector() {
-    // Chống lỗi map() bị null
     final validRooms = rooms.where((r) => r != null && r['id'] != null).toList();
 
     return Container(
@@ -263,7 +266,6 @@ class _SchedulingManagementScreenState
     DateTime formDate = DateTime.now();
     String formType = 'Thực hành';
 
-    // Lọc data sạch cho Dropdown
     final validRooms = rooms.where((r) => r != null && r['id'] != null).toList();
     final validModules = modules.where((m) => m != null && m['id'] != null).toList();
 
@@ -329,10 +331,8 @@ class _SchedulingManagementScreenState
                     ),
                     const SizedBox(height: 16),
 
-                   // --- ĐOẠN CODE THAY THẾ CHO PHẦN CHỌN TIẾT HỌC ---
                     Row(
                       children: [
-                        // CỘT 1: TIẾT BẮT ĐẦU
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: formStartPeriod,
@@ -340,7 +340,6 @@ class _SchedulingManagementScreenState
                             items: List.generate(10, (i) => DropdownMenuItem(value: i + 1, child: Text('Tiết ${i + 1}'))),
                             onChanged: (v) => setModalState(() {
                               formStartPeriod = v!;
-                              // Ràng buộc: Nếu đổi tiết bắt đầu lớn hơn tiết kết thúc hiện tại -> Tự động đẩy tiết kết thúc lên theo
                               if (formEndPeriod < formStartPeriod) {
                                 formEndPeriod = formStartPeriod;
                               }
@@ -348,26 +347,20 @@ class _SchedulingManagementScreenState
                           ),
                         ),
                         const SizedBox(width: 16),
-                        
-                        // CỘT 2: TIẾT KẾT THÚC (Chỉ hiển thị từ Tiết bắt đầu -> Tiết 10)
                         Expanded(
                           child: DropdownButtonFormField<int>(
                             value: formEndPeriod,
                             decoration: InputDecoration(labelText: 'Tiết kết thúc', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
-                            
-                            // Tự động generate danh sách linh hoạt: Từ formStartPeriod đến 10
                             items: List.generate(11 - formStartPeriod, (i) {
                               int validPeriod = formStartPeriod + i;
                               return DropdownMenuItem(value: validPeriod, child: Text('Tiết $validPeriod'));
                             }),
-                            
                             onChanged: (v) => setModalState(() => formEndPeriod = v!),
                           ),
                         ),
                       ],
                     ),
                     const SizedBox(height: 16),
-                    // -----------------------------------------------
 
                     DropdownButtonFormField<String>(
                       value: formType,
@@ -397,16 +390,11 @@ class _SchedulingManagementScreenState
                             return;
                           }
 
-                          // ========================================================
-                          // KIỂM TRA TRÙNG LỊCH TRƯỚC KHI GỬI LÊN SERVER
-                          // ========================================================
                           String inputDateStr = DateFormat('yyyy-MM-dd').format(formDate);
                           
                           bool isOverlap = schedules.any((s) {
-                            // 1. Kiểm tra có cùng Phòng không?
                             if (s['ma_phong'].toString() != formRoomId.toString()) return false;
                             
-                            // 2. Kiểm tra có cùng Ngày không?
                             String dbDateStr = '';
                             if (s['ngay_hoc_cu_the'] != null) {
                               DateTime? parsedDate = DateTime.tryParse(s['ngay_hoc_cu_the'].toString());
@@ -416,13 +404,11 @@ class _SchedulingManagementScreenState
                             }
                             if (dbDateStr != inputDateStr) return false;
 
-                            // 3. Kiểm tra xem Tiết học có đè lên nhau không?
                             int sStart = int.tryParse(s['so_tiet_bat_dau']?.toString() ?? '0') ?? 0;
                             int sEnd = int.tryParse(s['so_tiet_ket_thuc']?.toString() ?? '0') ?? 0;
 
-                            // Công thức Toán học bắt trùng lặp: (Start_A <= End_B) VÀ (End_A >= Start_B)
                             if (formStartPeriod <= sEnd && formEndPeriod >= sStart) {
-                              return true; // Phát hiện trùng lịch!
+                              return true;
                             }
 
                             return false;
@@ -431,14 +417,13 @@ class _SchedulingManagementScreenState
                           if (isOverlap) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('❌ Phòng này đã có lịch dạy trong khoảng thời gian này! Vui lòng chọn tiết hoặc phòng khác.'), 
+                                content: Text('❌ Phòng này đã có lịch dạy trong thời gian này! Vui lòng đổi giờ.'), 
                                 backgroundColor: Colors.red,
                                 duration: Duration(seconds: 4),
                               )
                             );
-                            return; // DỪNG LẠI, KHÔNG LƯU VÀO DATABASE
+                            return; 
                           }
-                          // ========================================================
 
                           final payload = {
                             'ma_phong': formRoomId,
@@ -450,13 +435,23 @@ class _SchedulingManagementScreenState
                             'thu_trong_tuan': 'Thứ ${formDate.weekday + 1 == 8 ? 'Chủ nhật' : formDate.weekday + 1}'
                           };
 
+                          // 🚀 BẮT LỖI TẠI ĐÂY: KHÔNG CHO PHÉP FAKE SUCCESS
                           try {
-                            await ApiService.post('/lich-phong', payload);
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thêm lịch thành công!'), backgroundColor: Colors.green));
-                            if (mounted) Navigator.pop(ctx);
-                            _loadData(); // Tải lại lưới lịch ngay lập tức
+                            final response = await ApiService.post('/schedule/lich-phong', payload);
+                            final resData = ApiService.decodeBody(response);
+
+                            if (response.statusCode == 200 || response.statusCode == 201) {
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Thêm lịch thành công vào CSDL!'), backgroundColor: Colors.green));
+                              if (mounted) Navigator.pop(ctx);
+                              _loadData(); 
+                            } else {
+                              String errorMsg = resData?['message']?.toString() ?? 'Lỗi Database hoặc sai API (Mã: ${response.statusCode})';
+                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Thêm thất bại: $errorMsg'), backgroundColor: Colors.red, duration: const Duration(seconds: 5))
+                              );
+                            }
                           } catch (e) {
-                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+                            if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sập mạng: $e'), backgroundColor: Colors.red));
                           }
                         },
                         child: const Text('LƯU LỊCH PHÒNG', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
@@ -473,7 +468,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // ================= DIALOG IMPORT EXCEL / CSV =================
   void _showImportDialog() {
     PlatformFile? selectedFile;
 
@@ -492,7 +486,6 @@ class _SchedulingManagementScreenState
                 InkWell(
                   onTap: () async {
                     try {
-                      // GỌI THƯ VIỆN CHỌN FILE
                       FilePickerResult? result = await FilePicker.platform.pickFiles(
                         type: FileType.custom,
                         allowedExtensions: ['csv', 'xlsx', 'xls'],
@@ -536,14 +529,11 @@ class _SchedulingManagementScreenState
               ElevatedButton(
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
                 onPressed: selectedFile == null ? null : () {
-                  // ĐÓNG DIALOG VÀ HIỂN THỊ THÔNG BÁO XỬ LÝ
                   Navigator.pop(ctx);
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                     content: Text('Đang xử lý file ${selectedFile!.name} lên hệ thống...'),
                     backgroundColor: Colors.orange,
                   ));
-                  
-                  // NOTE: Chỗ này sẽ gọi API Upload file (MultipartRequest) lên Backend sau khi có Backend hỗ trợ
                 },
                 child: const Text('Tiến hành Nhập', style: TextStyle(color: Colors.white)),
               ),
@@ -554,9 +544,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // ========================================================
-  // GIAO DIỆN LƯỚI (THỜI KHÓA BIỂU)
-  // ========================================================
   Widget _buildTimetableGrid() {
     if (_selectedRoomId == null) return const Center(child: Text('Vui lòng chọn phòng máy để xem thời khóa biểu'));
 
@@ -658,7 +645,6 @@ class _SchedulingManagementScreenState
     if (loaiLich.toLowerCase().contains('thuchanh')) { bgColor = Colors.green.shade50; textColor = Colors.green.shade900; }
     if (loaiLich.toLowerCase().contains('hocbu')) { bgColor = Colors.orange.shade50; textColor = Colors.orange.shade900; }
 
-    // XỬ LÝ AN TOÀN TRÁNH "NULL"
     String className = schedule['ma_lop'] ?? schedule['ma_lhp_str'] ?? '';
     String gvName = schedule['ten_giang_vien'] ?? 'Chưa phân công';
 
@@ -699,9 +685,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // ========================================================
-  // GIAO DIỆN DANH SÁCH (LIST VIEW)
-  // ========================================================
   Widget _buildListView() {
     DateTime monday = _currentWeekDate.subtract(Duration(days: _currentWeekDate.weekday - 1));
     DateTime sunday = monday.add(const Duration(days: 6, hours: 23, minutes: 59));
@@ -724,7 +707,8 @@ class _SchedulingManagementScreenState
       itemBuilder: (context, index) {
         final s = filteredSchedules[index];
         final ngayHoc = s['ngay_hoc_cu_the'] != null ? DateFormat('dd/MM/yyyy').format(DateTime.parse(s['ngay_hoc_cu_the']).toLocal()) : '';
-
+        String className = s['ma_lop'] ?? s['ma_lhp_str'] ?? 'Chưa gán lớp';
+        String gvName = s['ten_giang_vien'] ?? 'Chưa phân công';
         return Card(
           elevation: 1,
           margin: const EdgeInsets.only(bottom: 12),
@@ -732,7 +716,7 @@ class _SchedulingManagementScreenState
           child: ListTile(
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(backgroundColor: Colors.blue.shade50, radius: 25, child: const Icon(Icons.class_, color: Colors.blue)),
-            title: Text('${s['ten_mon']} - Lớp: ${s['ma_lop']}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+           title: Text('${s['ten_mon']} - Lớp: $className', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -752,9 +736,6 @@ class _SchedulingManagementScreenState
     );
   }
 
-  // ========================================================
-  // 2. TAB YÊU CẦU ĐẶT PHÒNG
-  // ========================================================
   Widget _buildBookingTab() {
     return Padding(
       padding: const EdgeInsets.all(16.0),

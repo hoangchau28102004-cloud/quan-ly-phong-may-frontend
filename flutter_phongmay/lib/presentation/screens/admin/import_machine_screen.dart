@@ -46,13 +46,21 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
   static const List<String> _dsRam = ['4GB', '8GB', '16GB', '32GB', '64GB'];
   static const List<String> _dsGpuType = ['Card Onboard', 'Card Rời'];
   static const List<String> _dsStorageType = ['SSD', 'HDD'];
-  static const List<String> _dsStorageType2 = ['Không', 'SSD', 'HDD']; 
-  static const List<String> _dsStorageCap = ['128GB', '256GB', '512GB', '1TB', '2TB'];
+  static const List<String> _dsStorageType2 = ['Không', 'SSD', 'HDD'];
+  static const List<String> _dsStorageCap = [
+    '128GB',
+    '256GB',
+    '512GB',
+    '1TB',
+    '2TB',
+  ];
 
   DateTime _selectedDate = DateTime.now();
   int? _selectedPhongId; // ma_phong trong DB
 
   final List<Map<String, dynamic>> _phieuNhaps = [];
+
+  int get _generatedMachineCount => int.tryParse(_soLuongController.text) ?? 0;
 
   @override
   void initState() {
@@ -113,8 +121,12 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
       String? ssdValue;
 
       void assignStorage(String type, String capacity) {
-        if (type == 'HDD') hddValue = (hddValue == null) ? capacity : '$hddValue + $capacity';
-        if (type == 'SSD') ssdValue = (ssdValue == null) ? capacity : '$ssdValue + $capacity';
+        if (type == 'HDD') {
+          hddValue = (hddValue == null) ? capacity : '$hddValue + $capacity';
+        }
+        if (type == 'SSD') {
+          ssdValue = (ssdValue == null) ? capacity : '$ssdValue + $capacity';
+        }
       }
 
       assignStorage(_storageType!, _storageCapacity!);
@@ -122,34 +134,46 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
         assignStorage(_storageType2!, _storageCapacity2!);
       }
 
-      // --- CHUẨN BỊ PAYLOAD ---
-      // Map các key khớp 100% với tên cột trong database ScriptDB_DATN.txt
-      final requestData = {
-        // Data bảng phieu_nhap_may
-        "ma_phieu_nhap": _maPhieuController.text,
-        "ngay_nhap": DateFormat('yyyy-MM-dd').format(_selectedDate),
-        "so_luong": int.tryParse(_soLuongController.text) ?? 1,
-        "nha_cung_cap": _nhaCungCapController.text,
-        "ghi_chu_phieu": _ghiChuController.text, // Tách biệt ghi chú phiếu
+      final vm = Provider.of<ImportViewModel>(context, listen: false);
 
-        // Data để backend sinh ra mảng máy tính (bảng may_tinh)
+      // 🚀 BƯỚC 1: TẠO DANH SÁCH MÁY THÔNG MINH (CHỐNG TRÙNG LẶP)
+      int soLuong = int.tryParse(_soLuongController.text) ?? 1;
+      String maPhieu = _maPhieuController.text;
+
+      // Tạo danh sách máy (Backend sẽ sinh tên/mã máy để tránh trùng lặp)
+      List<Map<String, dynamic>> danhSachMayTuDong = vm
+          .generateSmartMachineList(soLuong: soLuong);
+      // --- BƯỚC 2: CHUẨN BỊ PAYLOAD TRUYỀN XUỐNG BACKEND ---
+      final requestData = {
+        "ma_phieu_nhap": maPhieu,
+        "ngay_nhap": DateFormat('yyyy-MM-dd').format(_selectedDate),
+        "so_luong": soLuong,
+        "nha_cung_cap": _nhaCungCapController.text,
+        "ghi_chu_phieu": _ghiChuController.text,
+
         "ma_phong": _selectedPhongId,
         "bo_xu_ly": '$_cpuBrand ${_cpuDetailController.text.trim()}'.trim(),
         "ram": '${_ramBrandController.text.trim()} $_ramCapacity'.trim(),
-        "card_do_hoa": _gpuType == 'Card Rời' ? _gpuDetailController.text.trim() : 'Onboard',
+        "card_do_hoa": _gpuType == 'Card Rời'
+            ? _gpuDetailController.text.trim()
+            : 'Onboard',
         "bo_mach_chu": _mainboardController.text.trim(),
         "man_hinh": _monitorController.text.trim(),
         "ban_phim": _keyboardController.text.trim(),
         "chuot": _mouseController.text.trim(),
         "hdd": hddValue ?? '',
         "ssd": ssdValue ?? '',
+
+        // 🚀 BƯỚC 3: GỬI MẢNG CHI TIẾT MÁY LÊN BACKEND LƯU
+        "chi_tiet_may": danhSachMayTuDong,
       };
 
-      final vm = Provider.of<ImportViewModel>(context, listen: false);
       final isSuccess = await vm.createImportReceipt(requestData);
 
+      if (!mounted) return;
+
       if (isSuccess) {
-        // Ghép chuỗi để hiển thị ở bảng giao diện (không ảnh hưởng Backend)
+        // Ghép chuỗi để hiển thị ở bảng giao diện
         String strStorage = '$_storageType $_storageCapacity';
         if (_storageType2 != 'Không') {
           strStorage += ' + $_storageType2 $_storageCapacity2';
@@ -160,11 +184,13 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
             'maPhieu': requestData['ma_phieu_nhap'],
             'ngayNhap': requestData['ngay_nhap'],
             'soLuong': requestData['so_luong'],
-            'ghiChu': 'CPU: ${requestData['bo_xu_ly']} | RAM: ${requestData['ram']} | VGA: ${requestData['card_do_hoa']} | Lưu trữ: $strStorage',
+            'ghiChu':
+                'CPU: ${requestData['bo_xu_ly']} | RAM: ${requestData['ram']} | VGA: ${requestData['card_do_hoa']} | Lưu trữ: $strStorage',
           });
 
           // Reset Form
-          _maPhieuController.text = 'PN-${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
+          _maPhieuController.text =
+              'PN-${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
           _soLuongController.text = '1';
           _nhaCungCapController.clear();
           _ghiChuController.clear();
@@ -182,23 +208,25 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
           _storageCapacity2 = '1TB';
         });
 
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Tạo phiếu nhập và sinh mã máy thành công!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🎉 Nhập máy thành công!'),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Lỗi: ${vm.errorMessage}'),
-              backgroundColor: Colors.red,
+        // Hiện lỗi lấy trực tiếp từ ViewModel đã được dịch sang tiếng Việt
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(vm.errorMessage),
+            backgroundColor: Colors.redAccent,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
             ),
-          );
-        }
+          ),
+        );
       }
     }
   }
@@ -271,11 +299,6 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
               ),
             ],
           ),
-          if (vm.isLoading)
-            Container(
-              color: Colors.black.withOpacity(0.3),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
         ],
       ),
     );
@@ -320,14 +343,24 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                       ResponsiveLayout.isMobile(context)
                           ? Column(
                               children: [
-                                _buildTextField('Mã phiếu nhập', _maPhieuController, enabled: false),
+                                _buildTextField(
+                                  'Mã phiếu nhập',
+                                  _maPhieuController,
+                                  enabled: false,
+                                ),
                                 const SizedBox(height: 16),
                                 _buildDatePickerField(),
                               ],
                             )
                           : Row(
                               children: [
-                                Expanded(child: _buildTextField('Mã phiếu nhập', _maPhieuController, enabled: false)),
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Mã phiếu nhập',
+                                    _maPhieuController,
+                                    enabled: false,
+                                  ),
+                                ),
                                 const SizedBox(width: 16),
                                 Expanded(child: _buildDatePickerField()),
                               ],
@@ -336,18 +369,36 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                       ResponsiveLayout.isMobile(context)
                           ? Column(
                               children: [
-                                _buildTextField('Số lượng máy mới', _soLuongController, isNumber: true),
+                                _buildTextField(
+                                  'Số lượng máy mới',
+                                  _soLuongController,
+                                  isNumber: true,
+                                ),
                                 const SizedBox(height: 16),
                                 _buildRoomDropdown(vm),
                               ],
                             )
                           : Row(
                               children: [
-                                Expanded(child: _buildTextField('Số lượng máy mới', _soLuongController, isNumber: true)),
+                                Expanded(
+                                  child: _buildTextField(
+                                    'Số lượng máy mới',
+                                    _soLuongController,
+                                    isNumber: true,
+                                  ),
+                                ),
                                 const SizedBox(width: 16),
                                 Expanded(child: _buildRoomDropdown(vm)),
                               ],
                             ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Tạo $_generatedMachineCount máy mới; tên máy sẽ trùng với mã máy để tránh trùng lặp.',
+                        style: TextStyle(
+                          color: Colors.grey.shade700,
+                          fontSize: 13,
+                        ),
+                      ),
                       const SizedBox(height: 16),
                       _buildTextField(
                         'Nhà cung cấp',
@@ -368,6 +419,8 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                   isRequired: false,
                 ),
                 const SizedBox(height: 20),
+
+                // 🚀 NÚT BẤM HIỆN ĐẠI CÓ LOADING CHỐNG SPAM CLICK
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -378,12 +431,31 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    icon: const Icon(Icons.inventory_2_outlined, color: Colors.white, size: 20),
-                    label: const Text(
-                      'Tạo phiếu nhập',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                    icon: vm.isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          )
+                        : const Icon(
+                            Icons.inventory_2_outlined,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                    label: Text(
+                      vm.isLoading ? 'Đang lưu hệ thống...' : 'Tạo phiếu nhập',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                    onPressed: _submitForm,
+                    onPressed: vm.isLoading
+                        ? null
+                        : _submitForm, // Khoá nút khi đang load
                   ),
                 ),
               ],
@@ -409,7 +481,10 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -420,16 +495,23 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
             ),
           ),
           items: vm.rooms
-              .map((p) => DropdownMenuItem<int>(
-                    value: p['id'] as int,
-                    child: Text('${p['ma_phong']} - ${p['ten_phong']}', overflow: TextOverflow.ellipsis),
-                  ))
+              .map(
+                (p) => DropdownMenuItem<int>(
+                  value: p['id'] as int,
+                  child: Text(
+                    '${p['ma_phong']} - ${p['ten_phong']}',
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              )
               .toList(),
           onChanged: (v) => setState(() => _selectedPhongId = v),
           hint: Text(
             vm.isLoading
                 ? 'Đang tải phòng...'
-                : (vm.rooms.isEmpty ? '⚠️ DB chưa có phòng!' : 'Chọn phòng máy'),
+                : (vm.rooms.isEmpty
+                      ? '⚠️ DB chưa có phòng!'
+                      : 'Chọn phòng máy'),
           ),
         ),
       ],
@@ -452,7 +534,12 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
         const SizedBox(width: 12),
         Expanded(
           flex: 3,
-          child: _buildTextField('Thế hệ / Mã CPU', _cpuDetailController, hint: 'VD: Core i5 12400F', isRequired: false),
+          child: _buildTextField(
+            'Thế hệ / Mã CPU',
+            _cpuDetailController,
+            hint: 'VD: Core i5 12400F',
+            isRequired: false,
+          ),
         ),
       ],
     );
@@ -461,7 +548,12 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
       children: [
         Expanded(
           flex: 3,
-          child: _buildTextField('Hãng RAM', _ramBrandController, hint: 'VD: Kingston', isRequired: false),
+          child: _buildTextField(
+            'Hãng RAM',
+            _ramBrandController,
+            hint: 'VD: Kingston',
+            isRequired: false,
+          ),
         ),
         const SizedBox(width: 12),
         Expanded(
@@ -491,16 +583,41 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
           const SizedBox(width: 12),
           Expanded(
             flex: 3,
-            child: _buildTextField('Tên Card Rời', _gpuDetailController, hint: 'VD: RTX 3060', isRequired: false),
+            child: _buildTextField(
+              'Tên Card Rời',
+              _gpuDetailController,
+              hint: 'VD: RTX 3060',
+              isRequired: false,
+            ),
           ),
         ],
       ],
     );
 
-    Widget wMainboard = _buildTextField('Bo mạch chủ', _mainboardController, hint: 'VD: H610M', isRequired: false);
-    Widget wMonitor = _buildTextField('Màn hình', _monitorController, hint: 'VD: Dell 21.5 inch', isRequired: false);
-    Widget wKeyboard = _buildTextField('Bàn phím', _keyboardController, hint: 'VD: Logitech K120', isRequired: false);
-    Widget wMouse = _buildTextField('Chuột', _mouseController, hint: 'VD: Logitech B100', isRequired: false);
+    Widget wMainboard = _buildTextField(
+      'Bo mạch chủ',
+      _mainboardController,
+      hint: 'VD: H610M',
+      isRequired: false,
+    );
+    Widget wMonitor = _buildTextField(
+      'Màn hình',
+      _monitorController,
+      hint: 'VD: Dell 21.5 inch',
+      isRequired: false,
+    );
+    Widget wKeyboard = _buildTextField(
+      'Bàn phím',
+      _keyboardController,
+      hint: 'VD: Logitech K120',
+      isRequired: false,
+    );
+    Widget wMouse = _buildTextField(
+      'Chuột',
+      _mouseController,
+      hint: 'VD: Logitech B100',
+      isRequired: false,
+    );
 
     Widget wStorage = Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,18 +683,28 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
         children: [
           Row(
             children: [
-              Icon(Icons.memory, size: 20, color: Theme.of(context).primaryColor),
+              Icon(
+                Icons.memory,
+                size: 20,
+                color: Theme.of(context).primaryColor,
+              ),
               const SizedBox(width: 8),
-              const Text('Cấu hình chung', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+              const Text(
+                'Cấu hình chung',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
           // Sắp xếp lại Row hợp lý sau khi bỏ OS
           _buildResponsiveRow(wCpu, wRam),
           _buildResponsiveRow(wGpu, wMainboard),
-          _buildResponsiveRow(wStorage, wStorage2),  // Dòng 3: Gom 2 ổ cứng 
-          _buildResponsiveRow(wMonitor, wKeyboard),  // Dòng 4: Màn hình & Phím
-          _buildResponsiveRow(wMouse, const SizedBox()), // Dòng 5: Chuột 
+          _buildResponsiveRow(wStorage, wStorage2), // Dòng 3: Gom 2 ổ cứng
+          _buildResponsiveRow(wMonitor, wKeyboard), // Dòng 4: Màn hình & Phím
+          _buildResponsiveRow(wMouse, const SizedBox()), // Dòng 5: Chuột
         ],
       ),
     );
@@ -609,26 +736,67 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                    headingRowColor: WidgetStateProperty.all(
+                      Colors.grey.shade50,
+                    ),
                     dataRowMaxHeight: 60,
                     columns: const [
-                      DataColumn(label: Text('MÃ PHIẾU', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54))),
-                      DataColumn(label: Text('NGÀY NHẬP', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54))),
-                      DataColumn(label: Text('SỐ LƯỢNG', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54))),
-                      DataColumn(label: Text('CẤU HÌNH & GHI CHÚ', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black54))),
+                      DataColumn(
+                        label: Text(
+                          'MÃ PHIẾU',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'NGÀY NHẬP',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'SỐ LƯỢNG',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                      DataColumn(
+                        label: Text(
+                          'CẤU HÌNH & GHI CHÚ',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
                     ],
                     rows: _phieuNhaps
-                        .map((p) => DataRow(cells: [
+                        .map(
+                          (p) => DataRow(
+                            cells: [
                               DataCell(Text(p['maPhieu'] ?? '')),
                               DataCell(Text(p['ngayNhap'] ?? '')),
                               DataCell(Text('${p['soLuong'] ?? 0}')),
                               DataCell(
                                 SizedBox(
                                   width: 300,
-                                  child: Text(p['ghiChu'] ?? '', overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    p['ghiChu'] ?? '',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               ),
-                            ]))
+                            ],
+                          ),
+                        )
                         .toList(),
                   ),
                 ),
@@ -652,7 +820,10 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           controller: controller,
@@ -663,7 +834,10 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
             hintText: hint,
             filled: true,
             fillColor: enabled ? Colors.white : Colors.grey.shade200,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -673,7 +847,8 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
               borderSide: BorderSide(color: Colors.grey.shade300),
             ),
           ),
-          validator: (value) => (isRequired && value!.isEmpty) ? 'Không được trống' : null,
+          validator: (value) =>
+              (isRequired && value!.isEmpty) ? 'Không được trống' : null,
         ),
       ],
     );
@@ -683,7 +858,10 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Ngày nhập', style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        const Text(
+          'Ngày nhập',
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+        ),
         const SizedBox(height: 8),
         InkWell(
           onTap: () async {
@@ -705,7 +883,12 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(child: Text(DateFormat('dd/MM/yyyy').format(_selectedDate), overflow: TextOverflow.ellipsis)),
+                Expanded(
+                  child: Text(
+                    DateFormat('dd/MM/yyyy').format(_selectedDate),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
                 const Icon(Icons.calendar_today, size: 18, color: Colors.grey),
               ],
             ),
@@ -732,11 +915,16 @@ class ConfigDropdownWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final safeValue = (value != null && items.contains(value)) ? value : (items.isNotEmpty ? items.first : null);
+    final safeValue = (value != null && items.contains(value))
+        ? value
+        : (items.isNotEmpty ? items.first : null);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
+        Text(
+          label,
+          style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           isExpanded: true,
@@ -744,7 +932,10 @@ class ConfigDropdownWidget extends StatelessWidget {
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 12,
+              vertical: 12,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(color: Colors.grey.shade300),
@@ -755,10 +946,12 @@ class ConfigDropdownWidget extends StatelessWidget {
             ),
           ),
           items: items
-              .map((String i) => DropdownMenuItem<String>(
-                    value: i,
-                    child: Text(i, overflow: TextOverflow.ellipsis),
-                  ))
+              .map(
+                (String i) => DropdownMenuItem<String>(
+                  value: i,
+                  child: Text(i, overflow: TextOverflow.ellipsis),
+                ),
+              )
               .toList(),
           onChanged: onChanged,
         ),
