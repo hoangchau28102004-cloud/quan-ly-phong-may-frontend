@@ -39,7 +39,7 @@ dependencies:
   table_calendar: ^3.0.8
   supabase_flutter: ^2.15.0
   crypto: ^3.0.2
-  file_picker: ^3.0.4
+  file_picker: ^10.3.3
 
 dev_dependencies:
   flutter_test:
