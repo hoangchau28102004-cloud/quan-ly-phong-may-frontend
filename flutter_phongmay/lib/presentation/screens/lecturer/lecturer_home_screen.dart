@@ -5,6 +5,7 @@ import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/room_booking_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_profile_screen.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/qr_scanner_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -29,7 +30,7 @@ class _TeacherHomeState extends State<TeacherHome> {
     'CN',
   ];
 
-@override
+  @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -37,7 +38,9 @@ class _TeacherHomeState extends State<TeacherHome> {
       if (user != null) {
         context.read<ScheduleViewModel>().loadSchedule(
           nguoiDungId: user.id,
-          currentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()), // Tự động lấy ngày hôm nay
+          currentDate: DateFormat(
+            'yyyy-MM-dd',
+          ).format(DateTime.now()), // Tự động lấy ngày hôm nay
         );
       }
     });
@@ -45,16 +48,25 @@ class _TeacherHomeState extends State<TeacherHome> {
 
   void _onBottomNavTapped(int index) {
     if (index == 1) {
+      // VỊ TRÍ SỐ 2: QUÉT QR
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const QRScannerScreen()),
+      );
+    } else if (index == 2) {
+      // VỊ TRÍ SỐ 3: MƯỢN PHÒNG
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const RoomBookingScreen()),
       );
-    } else if (index == 2) {
+    } else if (index == 3) {
+      // VỊ TRÍ SỐ 4: CÁ NHÂN
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const TeacherProfileScreen()),
       );
     } else {
+      // VỊ TRÍ SỐ 1: LỊCH DẠY
       setState(() => _selectedIndex = index);
     }
   }
@@ -230,16 +242,25 @@ class _TeacherHomeState extends State<TeacherHome> {
         elevation: 10,
         type: BottomNavigationBarType.fixed,
         items: const [
+          // Index 0: Lịch dạy
           BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             activeIcon: Icon(Icons.calendar_today),
             label: 'Lịch dạy',
           ),
+          // Index 1: Quét QR (Đã thêm vào đây)
+          BottomNavigationBarItem(
+            icon: Icon(Icons.qr_code_scanner),
+            activeIcon: Icon(Icons.qr_code),
+            label: 'Quét QR',
+          ),
+          // Index 2: Mượn phòng
           BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
             activeIcon: Icon(Icons.add_box),
             label: 'Mượn phòng',
           ),
+          // Index 3: Cá nhân
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
@@ -253,24 +274,26 @@ class _TeacherHomeState extends State<TeacherHome> {
   // --- WIDGET CARD HIỂN THỊ LỚP HỌC CHI TIẾT ---
   Widget _buildTeacherClassCard(item) {
     String thuStr = item.thu == 8 ? 'Chủ Nhật' : 'Thứ ${item.thu}';
-    int tietBatDau = int.tryParse(item.gioBatDau.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
-    
+    int tietBatDau =
+        int.tryParse(item.gioBatDau.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
+
     String caHoc = 'Sáng';
-    Color badgeColor = Colors.green; 
+    Color badgeColor = Colors.green;
 
     if (tietBatDau >= 11) {
       caHoc = 'Tối';
-      badgeColor = Colors.indigo; 
+      badgeColor = Colors.indigo;
     } else if (tietBatDau >= 6) {
       caHoc = 'Chiều';
-      badgeColor = Colors.orange; 
+      badgeColor = Colors.orange;
     }
 
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
-      clipBehavior: Clip.antiAlias, // Cắt viền để hiệu ứng InkWell không tràn ra ngoài góc bo tròn
+      clipBehavior: Clip
+          .antiAlias, // Cắt viền để hiệu ứng InkWell không tràn ra ngoài góc bo tròn
       child: InkWell(
         onTap: () {
           // Hiển thị Bottom Sheet khi bấm vào Card
@@ -302,7 +325,7 @@ class _TeacherHomeState extends State<TeacherHome> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: badgeColor.withOpacity(0.15), 
+                      color: badgeColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -366,10 +389,16 @@ class _TeacherHomeState extends State<TeacherHome> {
   }
 
   // --- HÀM HIỂN THỊ BOTTOM SHEET (CHI TIẾT LỚP HỌC) ---
-  void _showClassDetails(BuildContext context, dynamic item, String thuStr, String caHoc, Color badgeColor) {
+  void _showClassDetails(
+    BuildContext context,
+    dynamic item,
+    String thuStr,
+    String caHoc,
+    Color badgeColor,
+  ) {
     showModalBottomSheet(
       context: context,
-      isScrollControlled: true, 
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -400,16 +429,29 @@ class _TeacherHomeState extends State<TeacherHome> {
                 ),
               ),
               const SizedBox(height: 20),
-              
+
               _buildDetailRow(Icons.book, 'Môn học:', item.tenMon),
               _buildDetailRow(Icons.room, 'Phòng máy:', item.tenPhong),
               _buildDetailRow(Icons.groups, 'Lớp học:', item.maLop),
-              _buildDetailRow(Icons.wb_sunny, 'Ca học:', 'Ca $caHoc', valueColor: badgeColor),
-              _buildDetailRow(Icons.access_time, 'Thời gian:', '${item.gioBatDau} - ${item.gioKetThuc}'),
-              _buildDetailRow(Icons.date_range, 'Ngày dạy:', '${item.ngayHoc} ($thuStr)'),
-              
+              _buildDetailRow(
+                Icons.wb_sunny,
+                'Ca học:',
+                'Ca $caHoc',
+                valueColor: badgeColor,
+              ),
+              _buildDetailRow(
+                Icons.access_time,
+                'Thời gian:',
+                '${item.gioBatDau} - ${item.gioKetThuc}',
+              ),
+              _buildDetailRow(
+                Icons.date_range,
+                'Ngày dạy:',
+                '${item.ngayHoc} ($thuStr)',
+              ),
+
               const SizedBox(height: 24),
-              
+
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -464,7 +506,12 @@ class _TeacherHomeState extends State<TeacherHome> {
   }
 
   // --- HÀM HELPER ĐỂ VẼ DÒNG THÔNG TIN Ở TRONG BOTTOM SHEET ---
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -489,7 +536,9 @@ class _TeacherHomeState extends State<TeacherHome> {
               style: TextStyle(
                 fontSize: 15,
                 color: valueColor ?? Colors.black87,
-                fontWeight: valueColor != null ? FontWeight.bold : FontWeight.normal,
+                fontWeight: valueColor != null
+                    ? FontWeight.bold
+                    : FontWeight.normal,
               ),
             ),
           ),
