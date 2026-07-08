@@ -4,6 +4,10 @@ import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart'; // THÊM IMPORT NÀY
 import 'package:flutter_phongmay/presentation/screens/lecturer/booking_history_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/report_issue_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/room_list_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/borrow_machine_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/shared/edit_profile_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/shared/change_password_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -16,7 +20,6 @@ class TeacherProfileScreen extends StatefulWidget {
 }
 
 class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
-  
   @override
   void initState() {
     super.initState();
@@ -38,7 +41,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   Widget build(BuildContext context) {
     final user = context.watch<LoginViewModel>().currentUser;
     // LẮNG NGHE SỰ THAY ĐỔI DỮ LIỆU TỪ VIEWMODEL
-    final scheduleVM = context.watch<ScheduleViewModel>(); 
+    final scheduleVM = context.watch<ScheduleViewModel>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F9),
@@ -131,11 +134,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   'Chờ duyệt',
                   '${scheduleVM.pendingCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
                   Colors.orange,
-                ), 
+                ),
                 _buildBadge(
-                  'Đã duyệt', 
+                  'Đã duyệt',
                   '${scheduleVM.approvedCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
-                  Colors.green
+                  Colors.green,
                 ),
               ],
               onTap: () {
@@ -158,9 +161,48 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               },
             ),
             _buildMenuItem(
-              icon: Icons.settings_outlined,
-              title: 'Cài đặt hệ thống',
-              onTap: () {},
+              icon: Icons.meeting_room,
+              title: 'Xem danh sách phòng máy',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const RoomListScreen()),
+                );
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.devices_other,
+              title: 'Mượn thiết bị / Máy tính',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BorrowMachineScreen(),
+                  ),
+                );
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.manage_accounts, // Đổi icon thành icon tài khoản
+              title: 'Cập nhật thông tin cá nhân',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                );
+              },
+            ),
+            _buildMenuItem(
+              icon: Icons.password,
+              title: 'Đổi mật khẩu',
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const ChangePasswordScreen(),
+                  ),
+                );
+              },
             ),
 
             const SizedBox(height: 32),
