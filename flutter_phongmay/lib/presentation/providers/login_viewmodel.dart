@@ -4,10 +4,10 @@ import 'package:flutter_phongmay/data/datasources/auth_service.dart';
 
 class LoginViewModel extends ChangeNotifier {
   final AuthService _authService = AuthService();
-
+  String? _token;
   bool isLoading = false;
   UserModel? currentUser;
-
+  String? get token => _token;
   Future<String?> handleLogin(String username, String password) async {
     if (username.isEmpty || password.isEmpty) {
       return "Vui lòng nhập đầy đủ thông tin";

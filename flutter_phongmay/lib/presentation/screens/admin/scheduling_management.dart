@@ -19,6 +19,7 @@ class _SchedulingManagementScreenState
   List<dynamic> schedules = [];
   List<dynamic> bookingRequests = [];
   List<dynamic> modules = [];
+  List<dynamic> teachers = [];
 
   // STATE CHO CHẾ ĐỘ THỜI KHÓA BIỂU
   bool _isGridView = true;
@@ -37,7 +38,7 @@ class _SchedulingManagementScreenState
       final sRes = await ApiService.get('/schedule/lich-phong');
       final bRes = await ApiService.get('/schedule/dat-phong');
       final rRes = await ApiService.get('/phong-may');
-
+      final tRes = await ApiService.get('/giang-vien');
       dynamic mRes;
       try {
         mRes = await ApiService.get('/lop-hoc-phan');
@@ -50,12 +51,13 @@ class _SchedulingManagementScreenState
         final bBody = ApiService.decodeBody(bRes);
         final rBody = ApiService.decodeBody(rRes);
         final mBody = mRes != null ? ApiService.decodeBody(mRes) : null;
+        final tBody = tRes != null ? ApiService.decodeBody(tRes) : null;  
 
         schedules = (sBody != null && sBody['data'] is List) ? sBody['data'] : [];
         bookingRequests = (bBody != null && bBody['data'] is List) ? bBody['data'] : [];
         rooms = (rBody != null && rBody['data'] is List) ? rBody['data'] : [];
         modules = (mBody != null && mBody['data'] is List) ? mBody['data'] : [];
-
+        teachers = (tBody != null && tBody['data'] is List) ? tBody['data'] : [];
         // Khởi tạo phòng mặc định
         if (rooms.isNotEmpty && _selectedRoomId == null) {
           _selectedRoomId = int.tryParse(rooms.first['id']?.toString() ?? '');
@@ -265,7 +267,9 @@ class _SchedulingManagementScreenState
     int formEndPeriod = 3;
     DateTime formDate = DateTime.now();
     String formType = 'Thực hành';
+    int? formTeacherId; // Biến hứng ID giảng viên
 
+    final validTeachers = teachers.where((t) => t != null && t['id'] != null).toList();
     final validRooms = rooms.where((r) => r != null && r['id'] != null).toList();
     final validModules = modules.where((m) => m != null && m['id'] != null).toList();
 
@@ -299,7 +303,16 @@ class _SchedulingManagementScreenState
                       onChanged: (v) => setModalState(() => formModuleId = v),
                     ),
                     const SizedBox(height: 16),
-
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      decoration: InputDecoration(labelText: 'Giảng viên (*)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                      items: validTeachers.map((t) => DropdownMenuItem<int>(
+                        value: int.tryParse(t['id'].toString()), 
+                        child: Text(t['ho_ten'] ?? t['ten_giang_vien'] ?? 'N/A')
+                      )).where((item) => item.value != null).toList(),
+                      onChanged: (v) => setModalState(() => formTeacherId = v),
+                    ),
+                    const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       isExpanded: true,
                       value: formRoomId,
@@ -428,6 +441,7 @@ class _SchedulingManagementScreenState
                           final payload = {
                             'ma_phong': formRoomId,
                             'ma_lop_hoc_phan': formModuleId,
+                            'ma_giang_vien': formTeacherId,
                             'ngay_hoc_cu_the': inputDateStr,
                             'so_tiet_bat_dau': formStartPeriod,
                             'so_tiet_ket_thuc': formEndPeriod,

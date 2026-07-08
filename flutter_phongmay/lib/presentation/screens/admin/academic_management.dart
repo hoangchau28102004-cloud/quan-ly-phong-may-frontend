@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 
 import '../../providers/academic_viewmodel.dart';
 import '../../../data/models/class_model.dart';
@@ -41,16 +42,10 @@ class AcademicManagementView extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 8,
-                  offset: Offset(0, 2),
-                ),
-              ],
+              boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8, offset: Offset(0, 2))],
             ),
             child: DefaultTabController(
-              length: 3,
+              length: 4, // ĐỔI THÀNH 4 TABS
               child: Column(
                 children: [
                   const TabBar(
@@ -58,26 +53,22 @@ class AcademicManagementView extends StatelessWidget {
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: Color(0xFF0F3E99),
                     indicatorWeight: 3,
-                    labelStyle: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 15,
-                    ),
+                    isScrollable: true, // Cho phép vuốt ngang trên màn nhỏ
+                    labelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                     tabs: [
                       Tab(text: 'Lớp học'),
+                      Tab(text: 'Năm học'), // TÍNH NĂNG MỚI NẰM GIỮA
                       Tab(text: 'Lớp học phần'),
                       Tab(text: 'Môn học'),
                     ],
                   ),
-                  const Divider(
-                    height: 1,
-                    thickness: 1,
-                    color: Color(0xFFEEEEEE),
-                  ),
+                  const Divider(height: 1, thickness: 1, color: Color(0xFFEEEEEE)),
 
                   const Expanded(
                     child: TabBarView(
                       children: [
                         ClassListBody(),
+                        AcademicYearListBody(), // HIỂN THỊ WIDGET MỚI
                         CourseSectionListBody(),
                         SubjectListBody(),
                       ],
@@ -94,7 +85,431 @@ class AcademicManagementView extends StatelessWidget {
 }
 
 // =========================================================================
-// --- TAB 1: DANH SÁCH LỚP HỌC ---
+// --- TAB MỚI: DANH SÁCH NĂM HỌC VÀ TUẦN TỰ ĐỘNG ---
+// =========================================================================
+class AcademicYearListBody extends StatefulWidget {
+  const AcademicYearListBody({Key? key}) : super(key: key);
+
+  @override
+  State<AcademicYearListBody> createState() => _AcademicYearListBodyState();
+}
+
+class _AcademicYearListBodyState extends State<AcademicYearListBody> {
+  final Color primaryNavy = const Color(0xFF0F3E99);
+  bool _isLoading = true;
+  List<dynamic> _years = [];
+  String _statusFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiService.get('/nam-hoc');
+      setState(() {
+        _years = ApiService.decodeBody(res)?['data'] ?? [];
+      });
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi tải năm học: $e')));
+    }
+    setState(() => _isLoading = false);
+  }
+
+  String _formatDate(dynamic dateStr) {
+    if (dateStr == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(dateStr.toString()).toLocal();
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } catch (_) {
+      return dateStr.toString();
+    }
+  }
+
+  void _showFormBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: AddYearForm(onSuccess: _loadData),
+      ),
+    );
+  }
+
+  void _showWeeksBottomSheet(int maNamHoc, String tenNamHoc) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => WeekListSheet(maNamHoc: maNamHoc, tenNamHoc: tenNamHoc),
+    );
+  }
+
+  Future<void> _deleteYear(int id, String tenNamHoc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa', style: TextStyle(color: Colors.red)),
+        content: Text('Xóa năm học $tenNamHoc sẽ xóa luôn toàn bộ tuần học bên trong. Bạn có chắc chắn?'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red), 
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Xóa', style: TextStyle(color: Colors.white))
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await ApiService.delete('/nam-hoc/$id');
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã xóa thành công!'), backgroundColor: Colors.green));
+        _loadData();
+      } catch (e) {
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _years.where((y) => _statusFilter == 'all' || y['trang_thai'] == _statusFilter).toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade300), borderRadius: BorderRadius.circular(8), color: Colors.white),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _statusFilter,
+                      items: const [
+                        DropdownMenuItem(value: 'all', child: Text('Tất cả năm học')),
+                        DropdownMenuItem(value: 'active', child: Text('Đang diễn ra')),
+                        DropdownMenuItem(value: 'pending', child: Text('Sắp diễn ra')),
+                        DropdownMenuItem(value: 'inactive', child: Text('Đã kết thúc')),
+                      ],
+                      onChanged: (val) => setState(() => _statusFilter = val!),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: primaryNavy, padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                onPressed: _showFormBottomSheet,
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text('Thêm mới', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filtered.isEmpty
+                  ? const Center(child: Text('Không có dữ liệu năm học.', style: TextStyle(color: Colors.grey)))
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: filtered.length,
+                      itemBuilder: (ctx, i) {
+                        final year = filtered[i];
+                        Color badgeColor = year['trang_thai'] == 'active' ? Colors.green : (year['trang_thai'] == 'pending' ? Colors.orange : Colors.grey);
+                        String badgeText = year['trang_thai'] == 'active' ? 'Đang diễn ra' : (year['trang_thai'] == 'pending' ? 'Sắp diễn ra' : 'Đã kết thúc');
+
+                        return Card(
+                          elevation: 0.5, 
+                          margin: const EdgeInsets.only(bottom: 12), 
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12), 
+                            side: BorderSide(color: Colors.grey.shade200), // Đã fix tại đây
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.all(6), 
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFE8EAF6), 
+                                            borderRadius: BorderRadius.circular(6)
+                                          ), 
+                                          child: Icon(Icons.date_range, color: primaryNavy, size: 18)
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(year['ten_nam_hoc'], style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey.shade800)),
+                                      ],
+                                    ),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), 
+                                      decoration: BoxDecoration(
+                                        color: badgeColor.withOpacity(0.1), 
+                                        borderRadius: BorderRadius.circular(6), 
+                                        border: Border.all(color: badgeColor.withOpacity(0.3)) // Ở BoxDecoration thì dùng Border.all là đúng
+                                      ),
+                                      child: Text(badgeText, style: TextStyle(color: badgeColor, fontWeight: FontWeight.bold, fontSize: 11)),
+                                    )
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.play_arrow, size: 14, color: Colors.grey), const SizedBox(width: 4),
+                                    Text('Bắt đầu: ${_formatDate(year['ngay_bat_dau'])}', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                                  ],
+                                ),
+                                const SizedBox(height: 4),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.stop, size: 14, color: Colors.grey), const SizedBox(width: 4),
+                                    Text('Kết thúc: ${_formatDate(year['ngay_ket_thuc'])}', style: TextStyle(color: Colors.grey.shade700, fontSize: 13)),
+                                  ],
+                                ),
+                                const Divider(height: 24),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    TextButton.icon(
+                                      onPressed: () => _showWeeksBottomSheet(year['id'], year['ten_nam_hoc']),
+                                      icon: const Icon(Icons.view_week, size: 16, color: Colors.blue), 
+                                      label: const Text('Xem Tuần', style: TextStyle(color: Colors.blue)),
+                                    ),
+                                    TextButton.icon(
+                                      onPressed: () => _deleteYear(year['id'], year['ten_nam_hoc']),
+                                      icon: const Icon(Icons.delete, size: 16, color: Colors.red), 
+                                      label: const Text('Xóa', style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                )
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+        ),
+      ],
+    );
+  }
+}
+
+// FORM DƯỚI ĐÁY TẠO NĂM HỌC 
+class AddYearForm extends StatefulWidget {
+  final VoidCallback onSuccess;
+  const AddYearForm({Key? key, required this.onSuccess}) : super(key: key);
+
+  @override
+  State<AddYearForm> createState() => _AddYearFormState();
+}
+
+class _AddYearFormState extends State<AddYearForm> {
+  final _formKey = GlobalKey<FormState>();
+  final Color primaryNavy = const Color(0xFF0F3E99);
+  
+  final _nameCtrl = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _status = 'pending';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24), decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Tạo Năm Học Mới', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryNavy)),
+            const SizedBox(height: 6),
+            Text('Lưu ý: Hệ thống sẽ tự động tính toán và sinh danh sách Tuần học (Từ T2 đến CN) dựa trên ngày bạn chọn.', style: TextStyle(color: Colors.grey.shade600, fontSize: 13, fontStyle: FontStyle.italic)),
+            const SizedBox(height: 24),
+            
+            TextFormField(
+              controller: _nameCtrl, decoration: InputDecoration(labelText: 'Tên năm học (VD: 2026-2027)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              validator: (v) => v!.isEmpty ? 'Vui lòng nhập tên' : null,
+            ),
+            const SizedBox(height: 16),
+            
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(context: context, initialDate: DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2035));
+                      if (d != null) setState(() => _startDate = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(10)),
+                      child: Text(_startDate == null ? 'Ngày bắt đầu' : DateFormat('dd/MM/yyyy').format(_startDate!), style: TextStyle(color: _startDate == null ? Colors.grey : Colors.black)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(context: context, initialDate: _startDate ?? DateTime.now(), firstDate: DateTime(2020), lastDate: DateTime(2035));
+                      if (d != null) setState(() => _endDate = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16), decoration: BoxDecoration(border: Border.all(color: Colors.grey.shade400), borderRadius: BorderRadius.circular(10)),
+                      child: Text(_endDate == null ? 'Ngày kết thúc' : DateFormat('dd/MM/yyyy').format(_endDate!), style: TextStyle(color: _endDate == null ? Colors.grey : Colors.black)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              value: _status, decoration: InputDecoration(labelText: 'Trạng thái', border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
+              items: const [
+                DropdownMenuItem(value: 'pending', child: Text('Sắp diễn ra')),
+                DropdownMenuItem(value: 'active', child: Text('Đang diễn ra')),
+              ],
+              onChanged: (v) => setState(() => _status = v!),
+            ),
+            const SizedBox(height: 24),
+            
+            SizedBox(
+              width: double.infinity, height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(backgroundColor: primaryNavy, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    if(_startDate == null || _endDate == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Vui lòng chọn ngày bắt đầu và kết thúc!'), backgroundColor: Colors.red));
+                      return;
+                    }
+                    if(_endDate!.isBefore(_startDate!)) {
+                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Ngày kết thúc phải sau ngày bắt đầu!'), backgroundColor: Colors.red));
+                       return;
+                    }
+
+                    try {
+                      await ApiService.post('/nam-hoc', {
+                        'ten_nam_hoc': _nameCtrl.text,
+                        'ngay_bat_dau': DateFormat('yyyy-MM-dd').format(_startDate!),
+                        'ngay_ket_thuc': DateFormat('yyyy-MM-dd').format(_endDate!),
+                        'trang_thai': _status
+                      });
+                      widget.onSuccess();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Tạo năm học thành công!'), backgroundColor: Colors.green));
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                    }
+                  }
+                },
+                child: const Text('LƯU & AUTO CHIA TUẦN', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =====================================
+// BOTTOM SHEET: XEM DANH SÁCH TUẦN ĐÃ CHIA
+// =====================================
+class WeekListSheet extends StatefulWidget {
+  final int maNamHoc;
+  final String tenNamHoc;
+  const WeekListSheet({Key? key, required this.maNamHoc, required this.tenNamHoc}) : super(key: key);
+
+  @override
+  State<WeekListSheet> createState() => _WeekListSheetState();
+}
+
+class _WeekListSheetState extends State<WeekListSheet> {
+  bool _isLoading = true;
+  List<dynamic> _weeks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeeks();
+  }
+
+  Future<void> _fetchWeeks() async {
+    try {
+      final res = await ApiService.get('/tuan/${widget.maNamHoc}');
+      setState(() => _weeks = ApiService.decodeBody(res)?['data'] ?? []);
+    } catch (e) {
+      debugPrint('Lỗi tải tuần: $e');
+    }
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20), decoration: const BoxDecoration(color: Colors.white, borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      height: MediaQuery.of(context).size.height * 0.7,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Tuần học - ${widget.tenNamHoc}', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF0F3E99))),
+              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+            ],
+          ),
+          Text('Tổng cộng: ${_weeks.length} tuần', style: const TextStyle(color: Colors.grey)),
+          const Divider(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _weeks.isEmpty
+                    ? const Center(child: Text('Chưa có dữ liệu tuần học.'))
+                    : ListView.separated(
+                        itemCount: _weeks.length,
+                        separatorBuilder: (context, index) => const Divider(height: 1),
+                        itemBuilder: (ctx, i) {
+                          final w = _weeks[i];
+                          final start = DateFormat('dd/MM/yyyy').format(DateTime.parse(w['ngay_bat_dau']).toLocal());
+                          final end = DateFormat('dd/MM/yyyy').format(DateTime.parse(w['ngay_ket_thuc']).toLocal());
+                          return ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: CircleAvatar(backgroundColor: const Color(0xFFE8EAF6), child: Text('${w['so_tuan']}', style: const TextStyle(color: Color(0xFF0F3E99), fontWeight: FontWeight.bold))),
+                            title: Text('Tuần ${w['so_tuan']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text('Từ: $start   Đến: $end', style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 1: DANH SÁCH LỚP HỌC (GIỮ NGUYÊN) ---
 // =========================================================================
 class ClassListBody extends StatefulWidget {
   const ClassListBody({super.key});
@@ -376,7 +791,6 @@ class _ClassListBodyState extends State<ClassListBody> {
                   ),
                   const SizedBox(height: 16),
 
-                  // ĐÃ SỬA: Thêm isExpanded và overflow cho Dropdown Giảng viên
                   DropdownButtonFormField<int>(
                     isExpanded: true,
                     initialValue: selectedTeacherId,
@@ -509,7 +923,7 @@ class _ClassListBodyState extends State<ClassListBody> {
 }
 
 // =========================================================================
-// --- TAB 2: DANH SÁCH LỚP HỌC PHẦN ---
+// --- TAB 3: DANH SÁCH LỚP HỌC PHẦN (GIỮ NGUYÊN) ---
 // =========================================================================
 class CourseSectionListBody extends StatefulWidget {
   const CourseSectionListBody({super.key});
@@ -909,7 +1323,6 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ĐÃ SỬA: Bổ sung isExpanded và overflow cho Môn học
                         Row(
                           children: [
                             Expanded(
@@ -978,7 +1391,6 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
                           hint: const Text('Chọn môn học'),
                         ),
                         const SizedBox(height: 16),
-                        // ĐÃ SỬA: Bổ sung isExpanded và overflow cho Năm học và Giảng viên
                         Row(
                           children: [
                             Expanded(
@@ -1041,7 +1453,6 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // ĐÃ SỬA: Bổ sung isExpanded và overflow cho Phòng
                         Row(
                           children: [
                             Expanded(
@@ -1085,7 +1496,6 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
                           ],
                         ),
                         const SizedBox(height: 16),
-                        // ĐÃ SỬA: Bổ sung isExpanded và overflow cho Trạng thái
                         DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: selectedTrangThai,
@@ -1250,7 +1660,7 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
 }
 
 // =========================================================================
-// --- TAB 3: DANH SÁCH MÔN HỌC ---
+// --- TAB 4: DANH SÁCH MÔN HỌC (GIỮ NGUYÊN) ---
 // =========================================================================
 class SubjectListBody extends StatefulWidget {
   const SubjectListBody({super.key});
@@ -1542,7 +1952,6 @@ class _SubjectListBodyState extends State<SubjectListBody> {
                   Row(
                     children: [
                       Expanded(
-                        // ĐÃ SỬA: Bổ sung isExpanded và overflow cho Loại môn
                         child: DropdownButtonFormField<String>(
                           isExpanded: true,
                           initialValue: selectedLoai,

@@ -27,6 +27,7 @@ import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.
 import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/transfer_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/borrow_return_management_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/student/student_dashboard_screen.dart';
 
 void main() async {
   // 1. Thêm 'async'
@@ -58,6 +59,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
         ChangeNotifierProvider(create: (_) => IssueViewModel()),
+        ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
       ],
       child: const MyApp(),
     ),

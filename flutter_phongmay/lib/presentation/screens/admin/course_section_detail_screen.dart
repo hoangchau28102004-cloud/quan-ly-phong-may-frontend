@@ -24,6 +24,13 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
     super.initState();
     // Gọi API lấy dữ liệu thật ngay khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final vm = context.read<AcademicViewModel>();
+      
+      // 1. Lấy SV đã có trong LHP này (Code cũ)
+      vm.fetchStudentsForModule(widget.sectionItem.id);
+      if (widget.sectionItem.maLop != null) {
+        vm.fetchStudentsForClass(widget.sectionItem.maLop!);
+      }
       context.read<AcademicViewModel>().fetchStudentsForModule(
         widget.sectionItem.id,
       );
@@ -272,7 +279,9 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
     AcademicViewModel viewModel,
   ) {
     int? selectedStudentId;
-
+    final availableStudents = viewModel.classStudents.where((svLop) {
+      return !viewModel.moduleStudents.any((svLhp) => svLhp.id == svLop.id);
+    }).toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -312,7 +321,7 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  items: viewModel.allStudents
+                  items: availableStudents
                       .map(
                         (sv) => DropdownMenuItem(
                           value: sv.id,
@@ -321,7 +330,7 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                       )
                       .toList(),
                   onChanged: (val) => setState(() => selectedStudentId = val),
-                  hint: viewModel.allStudents.isEmpty
+                  hint: availableStudents.isEmpty
                       ? const Text('Không có sinh viên nào')
                       : const Text('Chọn sinh viên cần thêm'),
                 ),

@@ -16,7 +16,9 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   List<dynamic> _rooms = [];
   int? _selectedRoomId;
-  int? _selectedComputerId;
+  
+  // ĐỔI SANG STRING ĐỂ LƯU MÃ MÁY (VD: "MT-4318-001")
+  String? _selectedComputerCode; 
 
   String _selectedType = 'Phần cứng';
   String _selectedSeverity = 'normal';
@@ -45,7 +47,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   void _submitReport() async {
-    if (!_formKey.currentState!.validate() || _selectedComputerId == null) {
+    // KIỂM TRA BIẾN STRING THAY VÌ INT
+    if (!_formKey.currentState!.validate() || _selectedComputerCode == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng chọn đầy đủ thông tin máy lỗi!'),
@@ -60,7 +63,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
     final success = await context.read<IssueViewModel>().sendIssueReport(
       maNguoiBaoCao: user.id,
-      maMayTinh: _selectedComputerId!,
+      maMayTinh: _selectedComputerCode!,
       loaiSuCo: _selectedType,
       tieuDe: _titleCtrl.text,
       moTa: _descCtrl.text,
@@ -113,30 +116,31 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                       onChanged: (val) {
                         setState(() {
                           _selectedRoomId = val;
-                          _selectedComputerId = null;
+                          _selectedComputerCode = null; // Reset máy tính khi đổi phòng học
                         });
-                        if (val != null)
+                        if (val != null) {
                           context.read<IssueViewModel>().fetchComputers(val);
+                        }
                       },
                     ),
                     const SizedBox(height: 12),
 
                     // CHỌN MÁY TÍNH BỊ LỖI
-                    DropdownButtonFormField<int>(
+                    DropdownButtonFormField<String>( // CHUYỂN KIỂU SANG STRING
                       decoration: const InputDecoration(
                         labelText: 'Chọn máy tính bị lỗi',
                       ),
-                      value: _selectedComputerId,
+                      value: _selectedComputerCode,
                       items: issueVM.computers
                           .map(
-                            (c) => DropdownMenuItem<int>(
-                              value: c['id'],
+                            (c) => DropdownMenuItem<String>(
+                              value: c['ma_may'].toString(), // LẤY ma_may THAY VÌ id
                               child: Text('${c['ten_may']} (${c['ma_may']})'),
                             ),
                           )
                           .toList(),
                       onChanged: (val) =>
-                          setState(() => _selectedComputerId = val),
+                          setState(() => _selectedComputerCode = val),
                     ),
                     const SizedBox(height: 12),
 

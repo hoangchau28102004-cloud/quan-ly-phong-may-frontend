@@ -3,6 +3,8 @@ import 'package:intl/intl.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
 import 'package:flutter_phongmay/presentation/screens/layout/responsive_layout.dart';
+// Import Tab Nhật ký
+import 'package:flutter_phongmay/presentation/screens/admin/maintenance_log_tab.dart'; 
 
 class IncidentMaintenanceManagementScreen extends StatefulWidget {
   const IncidentMaintenanceManagementScreen({super.key});
@@ -20,6 +22,7 @@ class _IncidentMaintenanceManagementScreenState
   bool isLoading = true;
   List<dynamic> incidents = [];
   List<dynamic> tickets = [];
+  List<dynamic> logs = []; // Đã khởi tạo mảng rỗng để tránh lỗi Null
 
   List<dynamic> computers = [];
   List<dynamic> users = [];
@@ -30,7 +33,7 @@ class _IncidentMaintenanceManagementScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this); // Đổi thành 3 Tab
     _loadData();
   }
 
@@ -45,14 +48,19 @@ class _IncidentMaintenanceManagementScreenState
     try {
       final iRes = await ApiService.get('/bao-cao-su-co');
       final tRes = await ApiService.get('/phieu-bao-tri');
+      
+      // Gọi API lấy Nhật ký
+      dynamic lRes;
+      try { lRes = await ApiService.get('/nhat-ky-sua-chua'); } catch (e) { debugPrint('Lỗi tải nhật ký: $e'); }
 
       dynamic cRes, uRes;
-      try { cRes = await ApiService.get('/may-tinh'); } catch (e) { debugPrint('Lỗi máy: $e'); }
-      try { uRes = await ApiService.get('/nguoi-dung'); } catch (e) { debugPrint('Lỗi người dùng: $e'); }
+      try { cRes = await ApiService.get('/may-tinh'); } catch (e) { debugPrint('Lỗi tải máy: $e'); }
+      try { uRes = await ApiService.get('/nguoi-dung'); } catch (e) { debugPrint('Lỗi tải người dùng: $e'); }
 
       setState(() {
         incidents = ApiService.decodeBody(iRes)?['data'] ?? [];
         tickets = ApiService.decodeBody(tRes)?['data'] ?? [];
+        logs = (lRes != null) ? (ApiService.decodeBody(lRes)?['data'] ?? []) : []; // Ép kiểu an toàn chống Null
         computers = (cRes != null) ? (ApiService.decodeBody(cRes)?['data'] ?? []) : [];
         users = (uRes != null) ? (ApiService.decodeBody(uRes)?['data'] ?? []) : [];
       });
@@ -107,7 +115,6 @@ class _IncidentMaintenanceManagementScreenState
     return 'pending';
   }
 
-  // ================= MODAL TẠO/SỬA PHIẾU BẢO TRÌ =================
   void _openTicketModal({Map<String, dynamic>? incidentItem, Map<String, dynamic>? ticketItem}) {
     bool isFromApprove = incidentItem != null && ticketItem == null;
 
@@ -250,44 +257,32 @@ class _IncidentMaintenanceManagementScreenState
                           final messenger = ScaffoldMessenger.of(context);
                           try {
                             if (ticketItem == null) { 
-                              // --- TẠO PHIẾU BẢO TRÌ MỚI ---
                               await ApiService.post('/phieu-bao-tri', payload); 
-                              
                               if (isFromApprove) {
                                 await ApiService.put('/bao-cao-su-co/${incidentItem['id']}', {
                                   'tieu_de': incidentItem['tieu_de'],
                                   'ma_may_tinh': incidentItem['ma_may_tinh'],
                                   'loai_su_co': incidentItem['loai_su_co'],
                                   'muc_do': incidentItem['muc_do'],
-                                  'trang_thai': 'in_progress', // Sang Đang sửa chữa
+                                  'trang_thai': 'in_progress', 
                                   'mo_ta': incidentItem['mo_ta']
                                 });
                               }
-
                               messenger.showSnackBar(const SnackBar(content: Text('Duyệt sự cố & Tạo phiếu thành công!'), backgroundColor: Colors.green));
                               if (!ctx.mounted) return;
                               Navigator.pop(ctx); 
                               await _loadData();
                               _tabController.animateTo(1); 
-
                             } else { 
-                              // --- CẬP NHẬT PHIẾU CŨ & TỰ ĐỘNG ĐỒNG BỘ SỰ CỐ ---
                               await ApiService.put('/phieu-bao-tri/${ticketItem['id']}', payload); 
 
-                              // ĐỒNG BỘ TRẠNG THÁI: Tìm sự cố gốc của phiếu này
                               final originalIncident = incidents.firstWhere((inc) => inc['id'] == selectedIncidentId, orElse: () => null);
                               if (originalIncident != null) {
-                                // Ánh xạ trạng thái
                                 String newIncidentStatus = originalIncident['trang_thai'];
-                                if (trangThai == 'completed') {
-                                  newIncidentStatus = 'closed'; // Phiếu hoàn tất -> Sự cố đã khắc phục
-                                } else if (trangThai == 'in_progress') {
-                                  newIncidentStatus = 'in_progress';
-                                } else if (trangThai == 'pending') {
-                                  newIncidentStatus = 'open';
-                                }
+                                if (trangThai == 'completed') newIncidentStatus = 'closed';
+                                else if (trangThai == 'in_progress') newIncidentStatus = 'in_progress';
+                                else if (trangThai == 'pending') newIncidentStatus = 'open';
 
-                                // Nếu trạng thái phiếu khiến trạng thái sự cố thay đổi thì tự động Update sự cố
                                 if (newIncidentStatus != originalIncident['trang_thai']) {
                                   await ApiService.put('/bao-cao-su-co/$selectedIncidentId', {
                                     'tieu_de': originalIncident['tieu_de'],
@@ -299,7 +294,6 @@ class _IncidentMaintenanceManagementScreenState
                                   });
                                 }
                               }
-
                               messenger.showSnackBar(const SnackBar(content: Text('Cập nhật phiếu và đồng bộ sự cố thành công!'), backgroundColor: Colors.green));
                               if (!ctx.mounted) return;
                               Navigator.pop(ctx); 
@@ -361,8 +355,9 @@ class _IncidentMaintenanceManagementScreenState
                 controller: _tabController,
                 labelColor: Colors.blue.shade800, unselectedLabelColor: Colors.grey, indicatorColor: Colors.blue.shade800,
                 tabs: const [
-                  Tab(text: 'Báo cáo Sự cố', icon: Icon(Icons.warning_amber_rounded)),
-                  Tab(text: 'Phiếu Bảo trì', icon: Icon(Icons.build_circle_outlined)),
+                  Tab(text: 'Sự cố', icon: Icon(Icons.warning_amber_rounded)),
+                  Tab(text: 'Phiếu bảo trì', icon: Icon(Icons.build_circle_outlined)),
+                  Tab(text: 'Nhật ký', icon: Icon(Icons.history_edu)),
                 ],
               ),
             ),
@@ -371,7 +366,12 @@ class _IncidentMaintenanceManagementScreenState
                   ? const Center(child: CircularProgressIndicator())
                   : TabBarView(
                       controller: _tabController,
-                      children: [_buildIncidentsTab(), _buildTicketsTab()]
+                      children: [
+                        _buildIncidentsTab(), 
+                        _buildTicketsTab(),
+                        // Truyền dữ liệu sang Tab Nhật ký để diệt lỗi Null
+                        MaintenanceLogTab(logs: logs, tickets: tickets, reloadCallback: _loadData),
+                      ]
                     ),
             ),
           ],

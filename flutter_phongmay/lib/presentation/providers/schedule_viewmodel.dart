@@ -49,7 +49,32 @@ class ScheduleViewModel extends ChangeNotifier {
     isLoading = false;
     notifyListeners();
   }
+  //  CHỈ DÀNH RIÊNG CHO SINH VIÊN LOAD LỊCH
+  Future<void> loadStudentScheduleOnly() async {
+    isLoading = true;
+    notifyListeners();
 
+    try {
+      // ÉP BUỘC GỌI VÀO ĐÚNG API CỦA SINH VIÊN
+      final response = await ApiService.get('/schedule/student');
+      
+      if (response.statusCode == 200) {
+        final data = ApiService.decodeBody(response);
+        if (data != null && data['success'] == true) {
+          List listData = data['data'];
+          weekSchedule = listData.map((e) => ScheduleItem.fromJson(e)).toList();
+        } else {
+          weekSchedule = [];
+        }
+      }
+    } catch (e) {
+      weekSchedule = [];
+      debugPrint('Lỗi loadStudentScheduleOnly: $e');
+    }
+
+    isLoading = false;
+    notifyListeners();
+  }
   // --- HÀM LẤY LỊCH SỬ MƯỢN PHÒNG VÀ ĐẾM SỐ LƯỢNG ---
   Future<void> fetchBookingHistory(int nguoiDungId) async {
     try {

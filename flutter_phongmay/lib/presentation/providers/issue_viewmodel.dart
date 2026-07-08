@@ -27,7 +27,7 @@ class IssueViewModel extends ChangeNotifier {
   // Gửi form báo lỗi lên hệ thống
   Future<bool> sendIssueReport({
     required int maNguoiBaoCao,
-    required int maMayTinh,
+    required String maMayTinh, // QUAN TRỌNG: Ép kiểu thành String
     required String loaiSuCo,
     required String tieuDe,
     required String moTa,
@@ -36,9 +36,10 @@ class IssueViewModel extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      final res = await ApiService.post('/issues/report', {
+      // Đảm bảo trỏ đúng endpoint là /bao-cao-su-co
+      final res = await ApiService.post('/bao-cao-su-co', {
         'ma_nguoi_bao_cao': maNguoiBaoCao,
-        'ma_may_tinh': maMayTinh,
+        'ma_may_tinh': maMayTinh, // Truyền thẳng chuỗi quét được xuống đây
         'loai_su_co': loaiSuCo,
         'tieu_de': tieuDe,
         'mo_ta': moTa,
@@ -46,7 +47,7 @@ class IssueViewModel extends ChangeNotifier {
       });
       isLoading = false;
       notifyListeners();
-      return res.statusCode == 200;
+      return res.statusCode == 200 || res.statusCode == 201;
     } catch (e) {
       debugPrint('Lỗi sendIssueReport: $e');
       isLoading = false;

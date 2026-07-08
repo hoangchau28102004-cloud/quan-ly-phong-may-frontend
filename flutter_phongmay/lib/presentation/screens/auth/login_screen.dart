@@ -3,11 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
-
+import 'package:flutter_phongmay/presentation/screens/layout/student_layout.dart';
 // Import 3 màn hình của 3 vai trò
 import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
-import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
+
 
 // Các mã màu lấy từ thiết kế CTTC
 const Color kCtRed = Color(0xFFD32F2F);
@@ -78,7 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
             } else if (user.vaiTroId == 3) {
               nextScreen = const TeacherHome();
             } else {
-              nextScreen = const StudentHome();
+              nextScreen = const StudentLayout();
             }
 
             Navigator.pushReplacement(
