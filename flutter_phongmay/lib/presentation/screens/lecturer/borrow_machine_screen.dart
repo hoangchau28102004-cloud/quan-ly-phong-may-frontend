@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/borrow_machine_history_screen.dart';
+import 'package:intl/intl.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -20,6 +21,34 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
   final TextEditingController _noteCtrl = TextEditingController();
   bool _isSubmitting = false;
 
+  // BIẾN LƯU NGÀY MƯỢN (Mặc định là ngày hôm nay)
+  DateTime _selectedDate = DateTime.now();
+
+  // HÀM MỞ LỊCH CHỌN NGÀY
+  Future<void> _pickDate(BuildContext context) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate,
+      firstDate: DateTime.now(), // Không cho chọn ngày quá khứ
+      lastDate: DateTime(2030),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: kAppBlue, // Màu của bộ chọn lịch
+              onPrimary: Colors.white,
+              onSurface: Colors.black,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null && picked != _selectedDate) {
+      setState(() => _selectedDate = picked);
+    }
+  }
+
   Future<void> _submitBorrowRequest() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -27,12 +56,13 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
     final user = context.read<LoginViewModel>().currentUser;
 
     try {
-      // Gọi API đăng ký mượn máy
+      // SỬA DÒNG DƯỚI ĐÂY THÀNH /borrow-machine CHO KHỚP VỚI BACKEND
       final res = await ApiService.post('/borrow-machine', {
         'nguoi_dung_id': user?.id,
         'so_luong': int.parse(_quantityCtrl.text),
         'ly_do_muon': _reasonCtrl.text,
         'ghi_chu': _noteCtrl.text,
+        'ngay_muon': DateFormat('yyyy-MM-dd HH:mm:ss').format(_selectedDate),
       });
 
       if (res.statusCode == 200 || res.statusCode == 201) {
@@ -104,6 +134,41 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
+                // --- GIAO DIỆN CHỌN NGÀY BẠN CẦN BỔ SUNG VÀO ĐÂY ---
+                const Text(
+                  'Ngày mượn',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black54,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                InkWell(
+                  onTap: () => _pickDate(context),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
+                    ),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(_selectedDate),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const Icon(Icons.calendar_today, color: kAppBlue),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                // --- KẾT THÚC PHẦN CHỌN NGÀY ---
 
                 // Số lượng
                 TextFormField(

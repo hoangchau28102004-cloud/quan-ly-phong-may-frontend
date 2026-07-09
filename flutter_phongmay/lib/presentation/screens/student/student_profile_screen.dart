@@ -2,25 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/booking_history_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/shared/report_issue_screen.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/room_list_screen.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/borrow_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/shared/edit_profile_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/shared/change_password_screen.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/return_machine_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
 // CHUYỂN TỪ STATELESS SANG STATEFUL WIDGET
-class TeacherProfileScreen extends StatefulWidget {
-  const TeacherProfileScreen({super.key});
+class StudentProfileScreen extends StatefulWidget {
+  const StudentProfileScreen({super.key});
 
   @override
-  State<TeacherProfileScreen> createState() => _TeacherProfileScreenState();
+  State<StudentProfileScreen> createState() => _StudentProfileScreenState();
 }
 
-class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
+class _StudentProfileScreenState extends State<StudentProfileScreen> {
   @override
   void initState() {
     super.initState();
@@ -122,36 +118,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
 
             // --- DANH SÁCH MENU OPTION ---
             _buildMenuItem(
-              icon: Icons.calendar_month_outlined,
-              title: 'Lịch dạy của tôi',
-              onTap: () =>
-                  Navigator.pop(context), // Bấm vào sẽ lùi về trang Home
-            ),
-            _buildMenuItem(
-              icon: Icons.receipt_long_outlined,
-              title: 'Lịch sử mượn phòng',
-              badges: [
-                _buildBadge(
-                  'Chờ duyệt',
-                  '${scheduleVM.pendingCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
-                  Colors.orange,
-                ),
-                _buildBadge(
-                  'Đã duyệt',
-                  '${scheduleVM.approvedCount}', // HIỂN THỊ SỐ LƯỢNG ĐỘNG
-                  Colors.green,
-                ),
-              ],
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const BookingHistoryScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildMenuItem(
               icon: Icons.warning_amber_rounded,
               title: 'Báo cáo sự cố',
               onTap: () {
@@ -161,40 +127,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 );
               },
             ),
-            _buildMenuItem(
-              icon: Icons.meeting_room,
-              title: 'Xem danh sách phòng máy',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const RoomListScreen()),
-                );
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.devices_other,
-              title: 'Mượn thiết bị / Máy tính',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const BorrowMachineScreen(),
-                  ),
-                );
-              },
-            ),
-            _buildMenuItem(
-              icon: Icons.assignment_return,
-              title: 'Trả máy / Thiết bị',
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const ReturnMachineScreen(),
-                  ),
-                );
-              },
-            ),
+
+            // 2. TÁC VỤ: CẬP NHẬT THÔNG TIN CÁ NHÂN
             _buildMenuItem(
               icon: Icons.manage_accounts,
               title: 'Cập nhật thông tin cá nhân',
@@ -205,6 +139,8 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                 );
               },
             ),
+
+            // 3. TÁC VỤ: ĐỔI MẬT KHẨU
             _buildMenuItem(
               icon: Icons.password,
               title: 'Đổi mật khẩu',
