@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+import '../../widgets/admin_assign_machine_dialog.dart'; // 🚀 Import Widget Popup duyệt máy
 import 'package:intl/intl.dart';
 
 class BorrowReturnManagementScreen extends StatefulWidget {
@@ -42,7 +43,24 @@ class _BorrowReturnManagementScreenState extends State<BorrowReturnManagementScr
     }
   }
 
-  // Cập nhật trạng thái phiếu mượn
+  // 🚀 LOGIC MỚI: Xử lý hiển thị Popup cho Admin chọn máy cấp phát
+  Future<void> _handleApproveBorrow(dynamic item) async {
+    bool? isAssigned = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false, // Bắt buộc thao tác, không cho bấm ra ngoài để tắt
+      builder: (context) => AdminAssignMachineDialog(
+        phieuId: item['id'], 
+        requiredQuantity: item['so_luong'] ?? 1, // Lấy số lượng GV yêu cầu, mặc định là 1 nếu null
+      ),
+    );
+
+    // Nếu Admin cấp máy thành công -> Tải lại danh sách
+    if (isAssigned == true) {
+      _loadData();
+    }
+  }
+
+  // Cập nhật trạng thái phiếu mượn (Dùng cho nút Hủy/Từ chối)
   Future<void> _updateBorrow(int id, String status) async {
     try {
       await ApiService.put('/muon-may/$id', {'trang_thai': status});
@@ -172,6 +190,7 @@ class _BorrowReturnManagementScreenState extends State<BorrowReturnManagementScr
             ),
             const SizedBox(width: 12),
             
+            // 🚀 NÚT DUYỆT & CẤP MÁY
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue.shade700, 
@@ -179,9 +198,9 @@ class _BorrowReturnManagementScreenState extends State<BorrowReturnManagementScr
                 elevation: 0, 
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))
               ),
-              onPressed: () => _updateBorrow(item['id'], 'Đã duyệt'), 
+              onPressed: () => _handleApproveBorrow(item), // Đổi hàm thực thi ở đây
               icon: const Icon(Icons.check_circle, size: 18),
-              label: const Text('Duyệt mượn'),
+              label: const Text('Duyệt & Cấp máy'),
             ),
           ] : [],
         );
