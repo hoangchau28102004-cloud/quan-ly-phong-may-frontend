@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'lecturer_attendance_screen.dart';
-import 'report_issue_screen.dart';
+import '../shared/report_issue_screen.dart';
 
 class LecturerMachineDetailScreen extends StatelessWidget {
   final Map<String, dynamic> machineData;
