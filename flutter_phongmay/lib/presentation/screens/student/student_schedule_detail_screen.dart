@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../data/datasources/api_service.dart';
+import 'student_qr_scanner_screen.dart';
 
 class StudentScheduleDetailScreen extends StatefulWidget {
   final int scheduleId;
 
-  const StudentScheduleDetailScreen({Key? key, required this.scheduleId}) : super(key: key);
+  const StudentScheduleDetailScreen({super.key, required this.scheduleId});
 
   @override
   State<StudentScheduleDetailScreen> createState() => _StudentScheduleDetailScreenState();
@@ -232,8 +233,12 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
       ),
       child: SafeArea(
         child: ElevatedButton.icon(
-          onPressed: () {
-            // TODO: Bắn qua màn hình quét QR điểm danh
+          onPressed: () {Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => StudentQRScannerScreen(scheduleId: widget.scheduleId),
+              ),
+            );
           },
           icon: const Icon(Icons.qr_code_scanner, size: 24),
           label: const Text('ĐIỂM DANH MÁY', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),

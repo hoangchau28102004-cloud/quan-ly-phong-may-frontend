@@ -21,7 +21,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   final _searchController = TextEditingController();
   final _importController = TextEditingController();
   final _defaultPasswordController = TextEditingController();
-  
+
   int _selectedRole = 2;
   int _filterRole = -1; // -1 means all
   int _filterStatus = -1; // -1 all, 1 active, 0 locked
@@ -50,7 +50,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
   // =========================================================================
   // CÁC HÀM LOGIC (GIỮ NGUYÊN 100% CỦA BẠN)
   // =========================================================================
-  
+
   void _showMessage(String message, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -84,7 +84,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               backgroundColor: isDestructive ? Colors.red : Colors.blue,
             ),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Xác nhận', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Xác nhận',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -94,7 +97,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       try {
         await onConfirm();
         _showMessage(successMessage);
-        if (mounted) Provider.of<UserViewModel>(context, listen: false).fetchUsers();
+        if (mounted)
+          Provider.of<UserViewModel>(context, listen: false).fetchUsers();
       } catch (e) {
         _showMessage('Lỗi: ${e.toString()}', isError: true);
       }
@@ -107,13 +111,13 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _phoneController.clear();
     final vm = Provider.of<UserViewModel>(context, listen: false);
     _selectedRole = vm.roles.isNotEmpty ? vm.roles.first['id'] as int : 2;
-    
+
     String? selectedGender;
     DateTime? selectedDob;
 
     await showDialog<void>(
       context: context,
-      builder: (ctx) => StatefulBuilder( 
+      builder: (ctx) => StatefulBuilder(
         builder: (context, setStateDialog) {
           return AlertDialog(
             title: const Text('Thêm người dùng'),
@@ -121,10 +125,18 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Họ và tên *')),
-                  TextField(controller: _emailController, decoration: const InputDecoration(labelText: 'Email (Tài khoản) *')),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Họ và tên *'),
+                  ),
+                  TextField(
+                    controller: _emailController,
+                    decoration: const InputDecoration(
+                      labelText: 'Email (Tài khoản) *',
+                    ),
+                  ),
                   const SizedBox(height: 8),
-                  
+
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Giới tính *'),
                     initialValue: selectedGender,
@@ -149,21 +161,43 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       }
                     },
                     child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Ngày sinh *'),
-                      child: Text(selectedDob != null ? DateFormat('yyyy-MM-dd').format(selectedDob!) : 'Chọn ngày...'),
+                      decoration: const InputDecoration(
+                        labelText: 'Ngày sinh *',
+                      ),
+                      child: Text(
+                        selectedDob != null
+                            ? DateFormat('yyyy-MM-dd').format(selectedDob!)
+                            : 'Chọn ngày...',
+                      ),
                     ),
                   ),
 
-                  TextField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Số điện thoại')),
-                  
+                  TextField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Số điện thoại',
+                    ),
+                  ),
+
                   Consumer<UserViewModel>(
                     builder: (context, vm, _) {
                       return vm.roles.isNotEmpty
                           ? DropdownButtonFormField<int>(
-                              decoration: const InputDecoration(labelText: 'Vai trò *'),
+                              decoration: const InputDecoration(
+                                labelText: 'Vai trò *',
+                              ),
                               initialValue: _selectedRole,
-                              items: vm.roles.map((r) => DropdownMenuItem(value: r['id'] as int, child: Text(r['ten_vai_tro'] ?? ''))).toList(),
-                              onChanged: (v) => setStateDialog(() => _selectedRole = v ?? _selectedRole),
+                              items: vm.roles
+                                  .map(
+                                    (r) => DropdownMenuItem(
+                                      value: r['id'] as int,
+                                      child: Text(r['ten_vai_tro'] ?? ''),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setStateDialog(
+                                () => _selectedRole = v ?? _selectedRole,
+                              ),
                             )
                           : const SizedBox();
                     },
@@ -172,32 +206,42 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Hủy')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Hủy'),
+              ),
               ElevatedButton(
                 onPressed: () async {
                   final name = _nameController.text.trim();
                   final email = _emailController.text.trim();
                   final phone = _phoneController.text.trim();
-                  
+
                   if (name.isEmpty || email.isEmpty) {
                     _showMessage('Vui lòng nhập tên và email', isError: true);
                     return;
                   }
                   if (selectedGender == null || selectedDob == null) {
-                    _showMessage('Vui lòng chọn giới tính và ngày sinh', isError: true);
+                    _showMessage(
+                      'Vui lòng chọn giới tính và ngày sinh',
+                      isError: true,
+                    );
                     return;
                   }
 
-                  final tempPw = (Random().nextInt(90000000) + 10000000).toString();
+                  final tempPw = (Random().nextInt(90000000) + 10000000)
+                      .toString();
                   final newUser = UserEntity(
-                    id: 0, taiKhoan: email, hoTen: name, email: email, 
+                    id: 0,
+                    taiKhoan: email,
+                    hoTen: name,
+                    email: email,
                     soDienThoai: phone.isNotEmpty ? phone : null,
                     vaiTroId: _selectedRole,
                     gioiTinh: selectedGender,
                     ngaySinh: DateFormat('yyyy-MM-dd').format(selectedDob!),
                     lopHocId: null,
                   );
-                  
+
                   try {
                     final created = await vm.createUser(newUser, tempPw);
                     if (mounted) Navigator.of(ctx).pop();
@@ -213,7 +257,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
@@ -223,12 +267,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _emailController.text = u.email ?? '';
     _phoneController.text = u.soDienThoai ?? '';
     _selectedRole = u.vaiTroId;
-    
+
     String? selectedGender = u.gioiTinh;
-    DateTime? selectedDob = u.ngaySinh != null ? DateTime.tryParse(u.ngaySinh!) : null;
-    
+    DateTime? selectedDob = u.ngaySinh != null
+        ? DateTime.tryParse(u.ngaySinh!)
+        : null;
+
     final vm = Provider.of<UserViewModel>(context, listen: false);
-    
+
     await showDialog<void>(
       context: context,
       builder: (ctx) => StatefulBuilder(
@@ -239,17 +285,24 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  TextField(controller: _nameController, decoration: const InputDecoration(labelText: 'Họ và tên *')),
+                  TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(labelText: 'Họ và tên *'),
+                  ),
                   TextField(
                     controller: _emailController,
-                    decoration: const InputDecoration(labelText: 'Email (Không được sửa)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Email (Không được sửa)',
+                    ),
                     enabled: false,
                   ),
                   const SizedBox(height: 8),
 
                   DropdownButtonFormField<String>(
                     decoration: const InputDecoration(labelText: 'Giới tính *'),
-                    initialValue: ['Nam', 'Nữ'].contains(selectedGender) ? selectedGender : null,
+                    initialValue: ['Nam', 'Nữ'].contains(selectedGender)
+                        ? selectedGender
+                        : null,
                     items: const [
                       DropdownMenuItem(value: 'Nam', child: Text('Nam')),
                       DropdownMenuItem(value: 'Nữ', child: Text('Nữ')),
@@ -266,24 +319,47 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         firstDate: DateTime(1950),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null) setStateDialog(() => selectedDob = date);
+                      if (date != null)
+                        setStateDialog(() => selectedDob = date);
                     },
                     child: InputDecorator(
-                      decoration: const InputDecoration(labelText: 'Ngày sinh *'),
-                      child: Text(selectedDob != null ? DateFormat('yyyy-MM-dd').format(selectedDob!) : 'Chọn ngày...'),
+                      decoration: const InputDecoration(
+                        labelText: 'Ngày sinh *',
+                      ),
+                      child: Text(
+                        selectedDob != null
+                            ? DateFormat('yyyy-MM-dd').format(selectedDob!)
+                            : 'Chọn ngày...',
+                      ),
                     ),
                   ),
 
-                  TextField(controller: _phoneController, decoration: const InputDecoration(labelText: 'Số điện thoại')),
+                  TextField(
+                    controller: _phoneController,
+                    decoration: const InputDecoration(
+                      labelText: 'Số điện thoại',
+                    ),
+                  ),
                   const SizedBox(height: 8),
                   Consumer<UserViewModel>(
                     builder: (context, vm2, _) {
                       return vm2.roles.isNotEmpty
                           ? DropdownButtonFormField<int>(
-                              decoration: const InputDecoration(labelText: 'Vai trò *'),
+                              decoration: const InputDecoration(
+                                labelText: 'Vai trò *',
+                              ),
                               initialValue: _selectedRole,
-                              items: vm2.roles.map((r) => DropdownMenuItem(value: r['id'] as int, child: Text(r['ten_vai_tro'] ?? ''))).toList(),
-                              onChanged: (v) => setStateDialog(() => _selectedRole = v ?? _selectedRole),
+                              items: vm2.roles
+                                  .map(
+                                    (r) => DropdownMenuItem(
+                                      value: r['id'] as int,
+                                      child: Text(r['ten_vai_tro'] ?? ''),
+                                    ),
+                                  )
+                                  .toList(),
+                              onChanged: (v) => setStateDialog(
+                                () => _selectedRole = v ?? _selectedRole,
+                              ),
                             )
                           : const SizedBox();
                     },
@@ -292,17 +368,25 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
             ),
             actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Hủy')),
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text('Hủy'),
+              ),
               ElevatedButton(
                 onPressed: () async {
                   final name = _nameController.text.trim();
                   final phone = _phoneController.text.trim();
-                  
-                  if (name.isEmpty || selectedGender == null || selectedDob == null) {
-                    _showMessage('Tên, Giới tính và Ngày sinh không được để trống', isError: true);
+
+                  if (name.isEmpty ||
+                      selectedGender == null ||
+                      selectedDob == null) {
+                    _showMessage(
+                      'Tên, Giới tính và Ngày sinh không được để trống',
+                      isError: true,
+                    );
                     return;
                   }
-                  
+
                   final updated = u.copyWith(
                     hoTen: name,
                     soDienThoai: phone.isNotEmpty ? phone : null,
@@ -323,7 +407,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
             ],
           );
-        }
+        },
       ),
     );
   }
@@ -348,7 +432,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 controller: _importController,
                 maxLines: 8,
                 decoration: const InputDecoration(
-                  hintText: 'Hoặc dán CSV ở đây...\nVí dụ: Nguyễn A, nguyen.a@mail.com, 0911222333, 2',
+                  hintText:
+                      'Hoặc dán CSV ở đây...\nVí dụ: Nguyễn A, nguyen.a@mail.com, 0911222333, 2',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -384,13 +469,19 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
   Future<void> _processImport(String csv, String password) async {
     final vm = Provider.of<UserViewModel>(context, listen: false);
-    final lines = csv.split(RegExp(r'\r?\n')).map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
+    final lines = csv
+        .split(RegExp(r'\r?\n'))
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty)
+        .toList();
     if (lines.isEmpty) return;
 
     final header = lines.first;
     int startIndex = 0;
     List<String> keys = [];
-    if (header.toLowerCase().contains('email') || header.toLowerCase().contains('ho') || header.toLowerCase().contains('name')) {
+    if (header.toLowerCase().contains('email') ||
+        header.toLowerCase().contains('ho') ||
+        header.toLowerCase().contains('name')) {
       keys = header.split(',').map((k) => k.trim().toLowerCase()).toList();
       startIndex = 1;
     }
@@ -418,8 +509,10 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           final v = parts[j];
           if (k.contains('ho') || k.contains('name')) hoTen = v;
           if (k.contains('email')) email = v;
-          if (k.contains('phone') || k.contains('dien') || k.contains('so')) phone = v;
-          if (k.contains('vai') || k.contains('role') || k.contains('ma_vai')) roleId = int.tryParse(v);
+          if (k.contains('phone') || k.contains('dien') || k.contains('so'))
+            phone = v;
+          if (k.contains('vai') || k.contains('role') || k.contains('ma_vai'))
+            roleId = int.tryParse(v);
         }
       } else {
         if (parts.isNotEmpty) hoTen = parts[0];
@@ -428,18 +521,28 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
         if (parts.length > 3) roleId = int.tryParse(parts[3]);
       }
 
-      if ((email == null || email.isEmpty) || (hoTen == null || hoTen.isEmpty)) {
+      if ((email == null || email.isEmpty) ||
+          (hoTen == null || hoTen.isEmpty)) {
         errors.add('Dòng ${i + 1}: Thiếu tên hoặc email');
         continue;
       }
 
       final defaultRole = vm.roles.isNotEmpty ? vm.roles.first['id'] as int : 2;
       final newUser = UserEntity(
-        id: 0, taiKhoan: email, hoTen: hoTen, email: email, soDienThoai: phone, vaiTroId: roleId ?? defaultRole, lopHocId: null,
+        id: 0,
+        taiKhoan: email,
+        hoTen: hoTen,
+        email: email,
+        soDienThoai: phone,
+        vaiTroId: roleId ?? defaultRole,
+        lopHocId: null,
       );
 
       try {
-        final created = await vm.createUser(newUser, password.isNotEmpty ? password : '123456');
+        final created = await vm.createUser(
+          newUser,
+          password.isNotEmpty ? password : '123456',
+        );
         if (created != null) success++;
       } catch (e) {
         errors.add('Dòng ${i + 1}: ${e.toString()}');
@@ -448,7 +551,8 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
 
     if (mounted) Navigator.of(context).pop();
 
-    final message = 'Import hoàn tất: $success thành công, ${errors.length} lỗi.';
+    final message =
+        'Import hoàn tất: $success thành công, ${errors.length} lỗi.';
     if (errors.isEmpty) {
       _showMessage(message);
     } else {
@@ -463,12 +567,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               children: [
                 Text(message),
                 const SizedBox(height: 8),
-                Expanded(child: SingleChildScrollView(child: Text(errors.join('\n')))),
+                Expanded(
+                  child: SingleChildScrollView(child: Text(errors.join('\n'))),
+                ),
               ],
             ),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('Đóng')),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Đóng'),
+            ),
           ],
         ),
       );
@@ -488,13 +597,14 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           tooltip: 'Reset mật khẩu',
           onPressed: () => _showConfirmAction(
             title: 'Xác nhận Reset mật khẩu',
-            content: 'Bạn có chắc chắn muốn đặt lại mật khẩu của người dùng ${u.hoTen} không?',
+            content:
+                'Bạn có chắc chắn muốn đặt lại mật khẩu của người dùng ${u.hoTen} không?',
             successMessage: 'Đã reset mật khẩu thành công!',
             onConfirm: () async => await vm.resetPassword(u.id),
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.edit, color: Colors.blue),
+          icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
           tooltip: 'Chỉnh sửa',
           onPressed: () => _showEditDialog(u),
         ),
@@ -514,11 +624,16 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           ),
         ),
         IconButton(
-          icon: const Icon(Icons.delete_outline, color: Colors.red),
+          icon: const Icon(
+            Icons.delete_outline,
+            color: Colors.redAccent,
+            size: 20,
+          ),
           tooltip: 'Xóa',
           onPressed: () => _showConfirmAction(
             title: 'Xóa tài khoản',
-            content: 'Bạn có chắc muốn xóa tài khoản người dùng ${u.hoTen} không?',
+            content:
+                'Bạn có chắc muốn xóa tài khoản người dùng ${u.hoTen} không?',
             successMessage: 'Đã xóa tài khoản thành công!',
             isDestructive: true,
             onConfirm: () async => await vm.deleteUser(u.id),
@@ -554,12 +669,17 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildResponsiveHeader(vm), // Header tìm kiếm/nút bấm co giãn
+                    _buildResponsiveHeader(
+                      vm,
+                    ), // Header tìm kiếm/nút bấm co giãn
                     const SizedBox(height: 16),
                     if (vm.error.isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Text(vm.error, style: const TextStyle(color: Colors.red)),
+                        child: Text(
+                          vm.error,
+                          style: const TextStyle(color: Colors.red),
+                        ),
                       ),
                     const SizedBox(height: 8),
                     // ==========================================
@@ -569,7 +689,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       child: LayoutBuilder(
                         builder: (context, constraints) {
                           final isMobile = constraints.maxWidth < 900;
-                          
+
                           if (isMobile) {
                             // --- GIAO DIỆN MOBILE: Dùng ListView & Card ---
                             return ListView.builder(
@@ -577,49 +697,91 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                               itemBuilder: (context, index) {
                                 final u = filteredUsers[index];
                                 final trangThai = u.trangThai;
-                                final roleName = vm.roles.firstWhere((r) => r['id'] == u.vaiTroId, orElse: () => {})['ten_vai_tro'] ?? '';
-                                
+                                final roleName =
+                                    vm.roles.firstWhere(
+                                      (r) => r['id'] == u.vaiTroId,
+                                      orElse: () => {},
+                                    )['ten_vai_tro'] ??
+                                    '';
+
                                 return Card(
                                   elevation: 2,
                                   margin: const EdgeInsets.only(bottom: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: Padding(
                                     padding: const EdgeInsets.all(16.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // Tên & Email
-                                        Text(u.hoTen, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                        Text(
+                                          u.hoTen,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
                                         const SizedBox(height: 4),
-                                        Text(u.email ?? 'Không có email', style: TextStyle(color: Colors.grey.shade600)),
+                                        Text(
+                                          u.email ?? 'Không có email',
+                                          style: TextStyle(
+                                            color: Colors.grey.shade600,
+                                          ),
+                                        ),
                                         const Divider(),
                                         // Thông tin chi tiết
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
-                                            Text('SĐT: ${u.soDienThoai ?? '-'}'),
-                                            Text('Giới tính: ${u.gioiTinh ?? '-'}'),
+                                            Text(
+                                              'SĐT: ${u.soDienThoai ?? '-'}',
+                                            ),
+                                            Text(
+                                              'Giới tính: ${u.gioiTinh ?? '-'}',
+                                            ),
                                           ],
                                         ),
                                         const SizedBox(height: 8),
                                         Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.spaceBetween,
                                           children: [
                                             Chip(
-                                              label: Text(roleName, style: const TextStyle(fontSize: 12)),
-                                              backgroundColor: Colors.blue.shade50,
+                                              label: Text(
+                                                roleName,
+                                                style: const TextStyle(
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              backgroundColor:
+                                                  Colors.blue.shade50,
                                               padding: EdgeInsets.zero,
                                             ),
                                             Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 8,
+                                                    vertical: 4,
+                                                  ),
                                               decoration: BoxDecoration(
-                                                color: trangThai == 1 ? Colors.green.shade50 : Colors.red.shade50,
-                                                borderRadius: BorderRadius.circular(6),
+                                                color: trangThai == 1
+                                                    ? Colors.green.shade50
+                                                    : Colors.red.shade50,
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
                                               ),
                                               child: Text(
-                                                trangThai == 1 ? 'Hoạt động' : 'Bị khóa',
+                                                trangThai == 1
+                                                    ? 'Hoạt động'
+                                                    : 'Bị khóa',
                                                 style: TextStyle(
-                                                  color: trangThai == 1 ? Colors.green : Colors.red,
+                                                  color: trangThai == 1
+                                                      ? Colors.green
+                                                      : Colors.red,
                                                   fontSize: 12,
                                                 ),
                                               ),
@@ -630,8 +792,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                         // Nút hành động
                                         Align(
                                           alignment: Alignment.centerRight,
-                                          child: _buildActionButtons(u, vm, trangThai ?? 0),
-                                        )
+                                          child: _buildActionButtons(
+                                            u,
+                                            vm,
+                                            trangThai ?? 0,
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   ),
@@ -643,51 +809,154 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                             return SingleChildScrollView(
                               scrollDirection: Axis.vertical, // Cuộn dọc
                               child: SingleChildScrollView(
-                                scrollDirection: Axis.horizontal, // Cuộn ngang nếu bảng quá rộng
+                                scrollDirection: Axis
+                                    .horizontal, // Cuộn ngang nếu bảng quá rộng
                                 child: DataTable(
                                   columnSpacing: 24,
-                                  headingRowColor: WidgetStateProperty.all(Colors.grey.shade100),
+                                  headingRowColor: WidgetStateProperty.all(
+                                    Colors.grey.shade100,
+                                  ),
                                   columns: const [
-                                    DataColumn(label: Text('Họ và Tên', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Email', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Giới tính', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Ngày sinh', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Số điện thoại', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Vai trò', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Trạng thái', style: TextStyle(fontWeight: FontWeight.bold))),
-                                    DataColumn(label: Text('Hành động', style: TextStyle(fontWeight: FontWeight.bold))),
+                                    DataColumn(
+                                      label: Text(
+                                        'Họ và Tên',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Email',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Giới tính',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Ngày sinh',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Số điện thoại',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Vai trò',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Trạng thái',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    DataColumn(
+                                      label: Text(
+                                        'Hành động',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                   rows: filteredUsers.map((u) {
                                     final trangThai = u.trangThai;
-                                    final roleName = vm.roles.firstWhere((r) => r['id'] == u.vaiTroId, orElse: () => {})['ten_vai_tro'] ?? '';
-                                    
+                                    final roleName =
+                                        vm.roles.firstWhere(
+                                          (r) => r['id'] == u.vaiTroId,
+                                          orElse: () => {},
+                                        )['ten_vai_tro'] ??
+                                        '';
+
                                     String displayDob = '-';
-                                    if (u.ngaySinh != null && u.ngaySinh!.isNotEmpty) {
-                                      displayDob = u.ngaySinh!.contains('T') ? u.ngaySinh!.split('T')[0] : u.ngaySinh!;
+                                    if (u.ngaySinh != null &&
+                                        u.ngaySinh!.isNotEmpty) {
+                                      displayDob = u.ngaySinh!.contains('T')
+                                          ? u.ngaySinh!.split('T')[0]
+                                          : u.ngaySinh!;
                                     }
 
                                     return DataRow(
                                       cells: [
                                         DataCell(Text(u.hoTen)),
-                                        DataCell(Text(u.email?.isNotEmpty == true ? u.email! : '-')),
-                                        DataCell(Text(u.gioiTinh?.isNotEmpty == true ? u.gioiTinh! : '-')),
+                                        DataCell(
+                                          Text(
+                                            u.email?.isNotEmpty == true
+                                                ? u.email!
+                                                : '-',
+                                          ),
+                                        ),
+                                        DataCell(
+                                          Text(
+                                            u.gioiTinh?.isNotEmpty == true
+                                                ? u.gioiTinh!
+                                                : '-',
+                                          ),
+                                        ),
                                         DataCell(Text(displayDob)),
-                                        DataCell(Text(u.soDienThoai?.isNotEmpty == true ? u.soDienThoai! : '-')),
+                                        DataCell(
+                                          Text(
+                                            u.soDienThoai?.isNotEmpty == true
+                                                ? u.soDienThoai!
+                                                : '-',
+                                          ),
+                                        ),
                                         DataCell(Text(roleName)),
                                         DataCell(
                                           Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 6,
+                                            ),
                                             decoration: BoxDecoration(
-                                              color: trangThai == 1 ? Colors.green.shade50 : Colors.red.shade50,
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: trangThai == 1
+                                                  ? Colors.green.shade50
+                                                  : Colors.red.shade50,
+                                              borderRadius:
+                                                  BorderRadius.circular(6),
                                             ),
                                             child: Text(
-                                              trangThai == 1 ? 'Hoạt động' : 'Bị khóa',
-                                              style: TextStyle(color: trangThai == 1 ? Colors.green : Colors.red),
+                                              trangThai == 1
+                                                  ? 'Hoạt động'
+                                                  : 'Bị khóa',
+                                              style: TextStyle(
+                                                color: trangThai == 1
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                              ),
                                             ),
                                           ),
                                         ),
-                                        DataCell(_buildActionButtons(u, vm, trangThai ?? 0)),
+                                        DataCell(
+                                          _buildActionButtons(
+                                            u,
+                                            vm,
+                                            trangThai ?? 0,
+                                          ),
+                                        ),
                                       ],
                                     );
                                   }).toList(),
@@ -712,7 +981,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isMobile = constraints.maxWidth < 700; // Breakpoint cho header
-        
+
         return Wrap(
           spacing: 12,
           runSpacing: 12,
@@ -737,7 +1006,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 onChanged: (_) => setState(() {}),
               ),
             ),
-            
+
             // Nhóm Filter
             Wrap(
               spacing: 12,
@@ -746,15 +1015,26 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 DropdownButton<int>(
                   value: _filterRole,
                   items: [
-                    const DropdownMenuItem(value: -1, child: Text('Tất cả Vai trò')),
-                    ...vm.roles.map((r) => DropdownMenuItem(value: r['id'] as int, child: Text(r['ten_vai_tro'] ?? ''))),
+                    const DropdownMenuItem(
+                      value: -1,
+                      child: Text('Tất cả Vai trò'),
+                    ),
+                    ...vm.roles.map(
+                      (r) => DropdownMenuItem(
+                        value: r['id'] as int,
+                        child: Text(r['ten_vai_tro'] ?? ''),
+                      ),
+                    ),
                   ],
                   onChanged: (v) => setState(() => _filterRole = v ?? -1),
                 ),
                 DropdownButton<int>(
                   value: _filterStatus,
                   items: const [
-                    DropdownMenuItem(value: -1, child: Text('Tất cả Trạng thái')),
+                    DropdownMenuItem(
+                      value: -1,
+                      child: Text('Tất cả Trạng thái'),
+                    ),
                     DropdownMenuItem(value: 1, child: Text('Hoạt động')),
                     DropdownMenuItem(value: 0, child: Text('Bị khóa')),
                   ],
@@ -762,7 +1042,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                 ),
               ],
             ),
-            
+
             // Nhóm Nút bấm
             Wrap(
               spacing: 8,
@@ -772,19 +1052,23 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                   onPressed: _showAddDialog,
                   icon: const Icon(Icons.add),
                   label: const Text('Thêm mới'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).primaryColor),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).primaryColor,
+                  ),
                 ),
                 ElevatedButton.icon(
                   onPressed: _showImportDialog,
                   icon: const Icon(Icons.file_upload_outlined),
                   label: const Text('Import'),
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                  ),
                 ),
               ],
             ),
           ],
         );
-      }
+      },
     );
   }
 }

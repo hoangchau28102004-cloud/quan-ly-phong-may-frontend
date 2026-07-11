@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import '../student/student_dashboard_screen.dart'; // Import file trang chủ của má
 import '../student/student_schedule_screen.dart'; // Import file lịch học vừa làm
+import '../student/student_profile_screen.dart';
 
 class StudentLayout extends StatefulWidget {
-  const StudentLayout({Key? key}) : super(key: key);
+  const StudentLayout({super.key});
 
   @override
   State<StudentLayout> createState() => _StudentLayoutState();
@@ -14,18 +15,15 @@ class _StudentLayoutState extends State<StudentLayout> {
 
   // Danh sách các màn hình của phân hệ Sinh viên
   final List<Widget> _screens = [
-    const StudentDashboardScreen(),      // Index 0: Tổng quan (Trang chủ)
-    const StudentScheduleScreen(),  // Index 1: Lịch học & Điểm danh
-    const Center(child: Text('Tài khoản cá nhân')), // Index 2: Profile (Làm sau)
+    const StudentDashboardScreen(),
+    const StudentScheduleScreen(),
+    const StudentProfileScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _screens),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           boxShadow: [
@@ -46,8 +44,14 @@ class _StudentLayoutState extends State<StudentLayout> {
           backgroundColor: Colors.white,
           selectedItemColor: const Color(0xFF1E3A8A), // Xanh Cao Thắng
           unselectedItemColor: Colors.grey.shade400,
-          selectedLabelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 12),
+          selectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 13,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.normal,
+            fontSize: 12,
+          ),
           type: BottomNavigationBarType.fixed,
           elevation: 0,
           items: const [

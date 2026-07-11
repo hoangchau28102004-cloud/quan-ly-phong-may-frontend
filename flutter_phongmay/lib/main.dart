@@ -10,7 +10,6 @@ import 'package:flutter_phongmay/presentation/providers/user_viewmodel.dart';
 import 'package:flutter_phongmay/data/repositories/user_repository_impl.dart';
 import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/issue_viewmodel.dart';
-// ---> ĐÃ THÊM IMPORT CHO IMPORT_VIEWMODEL Ở ĐÂY <---
 import 'package:flutter_phongmay/presentation/providers/import_viewmodel.dart';
 
 // --- TẦNG GIAO DIỆN ---
@@ -27,8 +26,8 @@ import 'package:flutter_phongmay/presentation/screens/scanner/qr_scanner_screen.
 import 'package:flutter_phongmay/presentation/screens/admin/import_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/transfer_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/borrow_return_management_screen.dart';
-import 'package:flutter_phongmay/presentation/screens/student/student_dashboard_screen.dart';
-
+import 'package:flutter_phongmay/presentation/screens/admin/borrow_machine_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/return_machine_screen.dart';
 void main() async {
   // 1. Thêm 'async'
   // 2. Cần thiết để khởi tạo bindings trước khi chạy code async
@@ -96,6 +95,8 @@ class MyApp extends StatelessWidget {
         '/admin/transfer': (context) => const TransferMachineScreen(),
         '/admin/borrow-return': (context) =>
             const BorrowReturnManagementScreen(),
+        '/admin/borrow': (context) => const BorrowMachineScreen(),
+        '/admin/return': (context) => const ReturnMachineScreen(),
         '/admin/scan-qr': (context) => const AdminRoomsScreen(),
       },
     );

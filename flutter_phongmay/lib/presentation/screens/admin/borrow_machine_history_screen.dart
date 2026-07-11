@@ -25,27 +25,25 @@ class _BorrowMachineHistoryScreenState
     _fetchData();
   }
 
-  Future<void> _fetchData() async {
+ Future<void> _fetchData() async {
     setState(() => _isLoading = true);
-    final user = context.read<LoginViewModel>().currentUser;
-    if (user != null) {
-      try {
-        final res = await ApiService.get(
-          '/borrow-machine/history?nguoi_dung_id=${user.id}',
-        );
-        if (res.statusCode == 200) {
-          final body = ApiService.decodeBody(res);
-          if (body != null && body['success'] == true) {
+    try {
+      // SỬA LẠI: Gọi đúng API của backend và lấy toàn bộ danh sách
+      final res = await ApiService.get('/borrow-return/muon-may');
+      
+      if (res.statusCode == 200) {
+        final body = ApiService.decodeBody(res);
+        if (body != null && body['success'] == true) {
+          setState(() {
             _history = List<dynamic>.from(body['data'] ?? []);
-          }
+          });
         }
-      } catch (e) {
-        debugPrint('Lỗi tải lịch sử mượn máy: $e');
       }
+    } catch (e) {
+      debugPrint('Lỗi tải lịch sử mượn máy: $e');
     }
     if (mounted) setState(() => _isLoading = false);
   }
-
   // Bảng hỏi xác nhận Hủy
   void _confirmDelete(int id) {
     showDialog(

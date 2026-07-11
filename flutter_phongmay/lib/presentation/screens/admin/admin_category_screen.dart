@@ -406,7 +406,8 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                                       IconButton(
                                         icon: const Icon(
                                           Icons.edit,
-                                          color: Colors.blue,
+                                          color: Colors.orange,
+                                          size: 20,
                                         ),
                                         onPressed: () => _editCategoryItem(
                                           item,
@@ -416,7 +417,8 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                                       IconButton(
                                         icon: const Icon(
                                           Icons.delete,
-                                          color: Colors.red,
+                                          color: Colors.redAccent,
+                                          size: 20,
                                         ),
                                         onPressed: () => _deleteCategoryItem(
                                           item,
@@ -440,7 +442,8 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.edit,
-                                        color: Colors.blue,
+                                        color: Colors.orange,
+                                        size: 20,
                                       ),
                                       onPressed: () =>
                                           _editCategoryItem(item, categoryName),
@@ -448,7 +451,8 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                                     IconButton(
                                       icon: const Icon(
                                         Icons.delete,
-                                        color: Colors.red,
+                                        color: Colors.redAccent,
+                                        size: 20,
                                       ),
                                       onPressed: () => _deleteCategoryItem(
                                         item,

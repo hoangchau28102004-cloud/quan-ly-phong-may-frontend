@@ -10,10 +10,10 @@ class StudentReportIncidentScreen extends StatefulWidget {
   final String machineName;
 
   const StudentReportIncidentScreen({
-    Key? key,
+    super.key,
     required this.machineId,
     required this.machineName,
-  }) : super(key: key);
+  });
 
   @override
   State<StudentReportIncidentScreen> createState() =>
@@ -138,7 +138,7 @@ class _StudentReportIncidentScreenState
               ),
               const SizedBox(height: 8),
               DropdownButtonFormField<String>(
-                value: _selectedIssueType,
+                initialValue: _selectedIssueType,
                 decoration: InputDecoration(
                   contentPadding: const EdgeInsets.symmetric(
                     horizontal: 16,

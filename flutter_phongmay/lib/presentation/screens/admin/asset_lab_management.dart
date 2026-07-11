@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+// Đảm bảo đường dẫn này khớp với vị trí file bạn vừa tạo
+import 'package:flutter_phongmay/presentation/screens/admin/machine_detail_screen.dart';
 
 class AssetLabManagementScreen extends StatefulWidget {
   const AssetLabManagementScreen({super.key});
@@ -15,7 +17,7 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
   List<Map<String, dynamic>> rooms = [];
   List<Map<String, dynamic>> computers = [];
   int? filterRoomId;
-  String filterStatus = 'Tất cả';
+  String filterStatus = 'active';
 
   @override
   void initState() {
@@ -309,7 +311,7 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
         (rooms.isNotEmpty ? (rooms.first['id'] as num?)?.toInt() : null);
     String selectedStatus =
         c['trang_thai']?.toString().toLowerCase() ?? 'active';
-    
+
     // Bóc tách dữ liệu cấu hình ĐÃ GỘP từ máy tính đổ vào Giao diện
     String oldCpu = c['bo_xu_ly']?.toString() ?? '';
     String cpuBrand = oldCpu.toLowerCase().contains('amd')
@@ -639,7 +641,7 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                         .trim();
                     String finalGhiChu =
                         'Bo mạch chủ: ${mainboardCtrl.text.trim()} | Bàn phím: ${keyboardCtrl.text.trim()} | Chuột: ${mouseCtrl.text.trim()}';
-                    
+
                     // CHỈ GỌI DUY NHẤT 1 API SỬA MÁY TÍNH
                     final compRes = await ApiService.put('/may-tinh/$id', {
                       'ma_may': maMay,
@@ -882,7 +884,17 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
     final ram = c['ram'] ?? '-';
 
     return InkWell(
-      onTap: () => _showComputerDetails(c, room['ten_phong']),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => MachineDetailScreen(
+              machine: c,
+              roomName: room['ten_phong'] ?? 'Chưa xếp phòng',
+            ),
+          ),
+        );
+      },
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
@@ -935,7 +947,17 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
         leading: const Icon(Icons.computer, color: Colors.blue),
         title: Text(c['ma_may'] ?? ''),
         subtitle: Text('CPU: $cpu | RAM: $ram | Lưu trữ: $storage'),
-        onTap: () => _showComputerDetails(c, room['ten_phong']),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => MachineDetailScreen(
+                machine: c,
+                roomName: room['ten_phong'] ?? 'Chưa xếp phòng',
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -1003,11 +1025,19 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.grey),
+                        icon: const Icon(
+                          Icons.edit,
+                          color: Colors.orange,
+                          size: 20,
+                        ),
                         onPressed: () => _editRoom(r),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.redAccent),
+                        icon: const Icon(
+                          Icons.delete,
+                          color: Colors.redAccent,
+                          size: 20,
+                        ),
                         onPressed: () => _deleteRoom(r),
                       ),
                     ],
@@ -1028,9 +1058,7 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
           filterRoomId == null ||
           c['ma_phong']?.toString() == filterRoomId?.toString();
       String status = c['trang_thai']?.toString() ?? 'active';
-      bool matchStatus =
-          filterStatus == 'Tất cả' ||
-          status.toLowerCase() == filterStatus.toLowerCase();
+      bool matchStatus = status.toLowerCase() == filterStatus.toLowerCase();
       return matchRoom && matchStatus;
     }).toList();
 
@@ -1094,23 +1122,16 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                     value: filterStatus,
                     items: const [
                       DropdownMenuItem(
-                        value: 'Tất cả',
-                        child: Text(
-                          'Mọi trạng thái',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                      DropdownMenuItem(
                         value: 'active',
                         child: Text(
-                          'Active (Đang dùng)',
+                          'Đang dùng',
                           style: TextStyle(fontSize: 14, color: Colors.green),
                         ),
                       ),
                       DropdownMenuItem(
-                        value: 'draft',
+                        value: 'borrowed',
                         child: Text(
-                          'Draft (Bản nháp)',
+                          'Đang mượn',
                           style: TextStyle(fontSize: 14, color: Colors.orange),
                         ),
                       ),
@@ -1123,7 +1144,7 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                       ),
                     ],
                     onChanged: (val) =>
-                        setState(() => filterStatus = val ?? 'Tất cả'),
+                        setState(() => filterStatus = val ?? 'active'),
                   ),
                 ),
               ),
@@ -1173,7 +1194,17 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                   ),
                   child: InkWell(
                     borderRadius: BorderRadius.circular(12),
-                    onTap: () => _showComputerDetails(c, roomName),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => MachineDetailScreen(
+                            machine: c,
+                            roomName: roomName,
+                          ),
+                        ),
+                      );
+                    },
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Column(
@@ -1321,111 +1352,6 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
           Text(
             text,
             style: TextStyle(fontSize: 12, color: Colors.grey.shade800),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // ===================== BOTTOM SHEET CHI TIẾT =====================
-  void _showComputerDetails(Map<String, dynamic> c, String roomName) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) {
-        return DraggableScrollableSheet(
-          initialChildSize: 0.6,
-          maxChildSize: 0.9,
-          minChildSize: 0.4,
-          expand: false,
-          builder: (context, scrollController) {
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: ListView(
-                controller: scrollController,
-                children: [
-                  Center(
-                    child: Container(
-                      width: 40,
-                      height: 5,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Chi tiết Máy Tính',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  _buildDetailRow('Mã máy', c['ma_may']),
-                  _buildDetailRow('Phòng', roomName),
-                  _buildDetailRow(
-                    'Trạng thái',
-                    c['trang_thai']?.toString().toUpperCase() ?? 'ACTIVE',
-                  ),
-                  const Divider(height: 30),
-                  Text(
-                    'Cấu hình chi tiết',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildDetailRow('CPU', c['bo_xu_ly']),
-                  _buildDetailRow('RAM', c['ram']),
-                  _buildDetailRow('Ổ cứng', c['ssd'] ?? c['hdd']),
-                  _buildDetailRow('VGA/GPU', c['card_do_hoa']),
-                  _buildDetailRow('Bo mạch chủ', c['bo_mach_chu']),
-                  _buildDetailRow('Màn hình', c['man_hinh']),
-                  _buildDetailRow('Bàn phím', c['ban_phim']),
-                  _buildDetailRow('Chuột', c['chuot']),
-                  _buildDetailRow('Ghi chú', c['ghi_chu']),
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: const Size(double.infinity, 50),
-                    ),
-                    child: const Text('Đóng'),
-                  ),
-                ],
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(String label, dynamic value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(label, style: TextStyle(color: Colors.grey.shade600)),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(
-              value?.toString() ?? 'N/A',
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
           ),
         ],
       ),

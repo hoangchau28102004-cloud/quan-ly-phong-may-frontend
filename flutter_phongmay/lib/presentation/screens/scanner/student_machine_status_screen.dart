@@ -6,10 +6,10 @@ class StudentMachineStatusScreen extends StatelessWidget {
   final Map<String, dynamic> machineData; // 🚀 ĐÃ FIX: Nhận Data thật từ API
   
   const StudentMachineStatusScreen({
-    Key? key, 
+    super.key, 
     required this.qrData,
     required this.machineData,
-  }) : super(key: key);
+  });
 
   final Color primaryNavy = const Color(0xFF1E3A8A);
 

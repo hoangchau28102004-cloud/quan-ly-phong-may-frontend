@@ -249,6 +249,7 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
   }
 
   // GIAO DIỆN BẢNG LỊCH SỬ
+  // GIAO DIỆN BẢNG LỊCH SỬ
   Widget _buildHistoryTable() {
     return Card(
       elevation: 2,
@@ -262,7 +263,7 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            history.isEmpty
+            history.isEmpty // Đã đổi thành history
                 ? const Padding(
                     padding: EdgeInsets.all(20.0),
                     child: Text(
@@ -273,59 +274,37 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
                 : SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: DataTable(
-                      headingRowColor: WidgetStateProperty.all(
-                        Colors.grey.shade100,
+                      headingTextStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
+                      dataRowMinHeight: 60,
+                      dataRowMaxHeight: 80,
                       columns: const [
-                        DataColumn(
-                          label: Text(
-                            'Mã máy',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Từ phòng',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Đến phòng',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Lý do',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        DataColumn(
-                          label: Text(
-                            'Thời gian',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        ),
+                        DataColumn(label: Text('Mã máy')),
+                        DataColumn(label: Text('Từ phòng')),
+                        DataColumn(label: Text('Đến phòng')),
+                        DataColumn(label: Text('Lý do')),
                       ],
-                      rows: history
-                          .map(
-                            (h) => DataRow(
-                              cells: [
-                                DataCell(
-                                  Text(h['may_tinh_ids']?.toString() ?? 'N/A'),
+                      // ĐÃ SỬA CHỖ NÀY: Dùng biến `history` thay vì `_historyList`
+                      rows: history.map<DataRow>((item) {
+                        return DataRow(
+                          cells: [
+                            DataCell(
+                              SizedBox(
+                                width: 120, 
+                                child: Text(
+                                  item['danh_sach_may']?.toString() ?? 'N/A',
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
                                 ),
-                                // Đã áp dụng DB MỚI: ma_phong_cu, ma_phong_moi
-                                DataCell(Text(_getRoomName(h['ma_phong_cu']))),
-                                DataCell(Text(_getRoomName(h['ma_phong_moi']))),
-                                DataCell(Text(h['ly_do']?.toString() ?? '')),
-                                DataCell(
-                                  Text(h['created_at']?.toString() ?? ''),
-                                ),
-                              ],
+                              ),
                             ),
-                          )
-                          .toList(),
+                            DataCell(Text(item['tu_phong']?.toString() ?? 'N/A')),
+                            DataCell(Text(item['den_phong']?.toString() ?? 'N/A')),
+                            DataCell(Text(item['ly_do']?.toString() ?? '')),
+                          ],
+                        );
+                      }).toList(), 
                     ),
                   ),
           ],

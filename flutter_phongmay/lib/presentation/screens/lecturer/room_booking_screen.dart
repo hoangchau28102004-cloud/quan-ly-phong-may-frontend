@@ -309,7 +309,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        value: _tietBatDau,
+                        initialValue: _tietBatDau,
                         items: List.generate(
                           12,
                           (i) => DropdownMenuItem(
@@ -369,7 +369,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                             borderSide: BorderSide(color: Colors.grey.shade300),
                           ),
                         ),
-                        value: _tietKetThuc,
+                        initialValue: _tietKetThuc,
                         disabledHint: const Text(
                           'Chọn',
                           style: TextStyle(fontSize: 13, color: Colors.grey),

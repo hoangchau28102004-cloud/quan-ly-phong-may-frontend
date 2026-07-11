@@ -4,7 +4,7 @@ import '../../providers/student_dashboard_viewmodel.dart';
 import '../../providers/login_viewmodel.dart';
 
 class StudentDashboardScreen extends StatefulWidget {
-  const StudentDashboardScreen({Key? key}) : super(key: key);
+  const StudentDashboardScreen({super.key});
 
   @override
   State<StudentDashboardScreen> createState() => _StudentDashboardScreenState();

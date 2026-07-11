@@ -7,11 +7,11 @@ class LecturerAttendanceScreen extends StatefulWidget {
   final int scheduleId;
 
   const LecturerAttendanceScreen({
-    Key? key,
+    super.key,
     required this.tenMon,
     required this.maLop,
     required this.scheduleId,
-  }) : super(key: key);
+  });
 
   @override
   State<LecturerAttendanceScreen> createState() => _LecturerAttendanceScreenState();

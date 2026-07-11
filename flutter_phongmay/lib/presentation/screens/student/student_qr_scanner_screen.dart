@@ -8,7 +8,7 @@ import '../../providers/login_viewmodel.dart';
 class StudentQRScannerScreen extends StatefulWidget {
   final int scheduleId;
   
-  const StudentQRScannerScreen({Key? key, required this.scheduleId}) : super(key: key);
+  const StudentQRScannerScreen({super.key, required this.scheduleId});
   
   @override
   State<StudentQRScannerScreen> createState() => _StudentQRScannerScreenState();

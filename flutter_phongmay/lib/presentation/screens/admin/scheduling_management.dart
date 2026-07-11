@@ -51,7 +51,7 @@ class _SchedulingManagementScreenState
         final bBody = ApiService.decodeBody(bRes);
         final rBody = ApiService.decodeBody(rRes);
         final mBody = mRes != null ? ApiService.decodeBody(mRes) : null;
-        final tBody = tRes != null ? ApiService.decodeBody(tRes) : null;  
+        final tBody = ApiService.decodeBody(tRes);  
 
         schedules = (sBody != null && sBody['data'] is List) ? sBody['data'] : [];
         bookingRequests = (bBody != null && bBody['data'] is List) ? bBody['data'] : [];
@@ -315,7 +315,7 @@ class _SchedulingManagementScreenState
                     const SizedBox(height: 16),
                     DropdownButtonFormField<int>(
                       isExpanded: true,
-                      value: formRoomId,
+                      initialValue: formRoomId,
                       decoration: InputDecoration(labelText: 'Phòng máy (*)', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       items: validRooms.map((r) => DropdownMenuItem<int>(
                         value: int.tryParse(r['id'].toString()), 
@@ -348,7 +348,7 @@ class _SchedulingManagementScreenState
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: formStartPeriod,
+                            initialValue: formStartPeriod,
                             decoration: InputDecoration(labelText: 'Tiết bắt đầu', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                             items: List.generate(10, (i) => DropdownMenuItem(value: i + 1, child: Text('Tiết ${i + 1}'))),
                             onChanged: (v) => setModalState(() {
@@ -362,7 +362,7 @@ class _SchedulingManagementScreenState
                         const SizedBox(width: 16),
                         Expanded(
                           child: DropdownButtonFormField<int>(
-                            value: formEndPeriod,
+                            initialValue: formEndPeriod,
                             decoration: InputDecoration(labelText: 'Tiết kết thúc', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                             items: List.generate(11 - formStartPeriod, (i) {
                               int validPeriod = formStartPeriod + i;
@@ -376,7 +376,7 @@ class _SchedulingManagementScreenState
                     const SizedBox(height: 16),
 
                     DropdownButtonFormField<String>(
-                      value: formType,
+                      initialValue: formType,
                       decoration: InputDecoration(labelText: 'Loại lịch', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
                       items: const [
                         DropdownMenuItem(value: 'Lý thuyết', child: Text('Lý thuyết')),
@@ -460,9 +460,11 @@ class _SchedulingManagementScreenState
                               _loadData(); 
                             } else {
                               String errorMsg = resData?['message']?.toString() ?? 'Lỗi Database hoặc sai API (Mã: ${response.statusCode})';
-                              if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(content: Text('Thêm thất bại: $errorMsg'), backgroundColor: Colors.red, duration: const Duration(seconds: 5))
                               );
+                              }
                             }
                           } catch (e) {
                             if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Sập mạng: $e'), backgroundColor: Colors.red));

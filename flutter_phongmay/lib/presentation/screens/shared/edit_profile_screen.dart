@@ -226,7 +226,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       children: [
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _selectedGender,
+                            initialValue: _selectedGender,
                             decoration: InputDecoration(
                               labelText: 'Giới tính',
                               prefixIcon: const Icon(Icons.wc, color: kAppBlue),

@@ -3,12 +3,10 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/student_dashboard_viewmodel.dart';
 import '../../providers/login_viewmodel.dart'; 
-import 'student_qr_scanner_screen.dart';
-// 🚀 ĐÃ THÊM: Import màn hình chi tiết lịch học của sinh viên
 import 'student_schedule_detail_screen.dart'; 
 
 class StudentScheduleScreen extends StatefulWidget {
-  const StudentScheduleScreen({Key? key}) : super(key: key);
+  const StudentScheduleScreen({super.key});
 
   @override
   State<StudentScheduleScreen> createState() => _StudentScheduleScreenState();
@@ -57,26 +55,7 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          if (viewModel.filteredSchedules.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Không có buổi học nào kích hoạt để điểm danh!')),
-            );
-            return;
-          }
-          final currentScheduleId = viewModel.filteredSchedules.first['id'];
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => StudentQRScannerScreen(scheduleId: currentScheduleId),
-            ),
-          );
-        },
-        backgroundColor: const Color(0xFF1E3A8A),
-        icon: const Icon(Icons.qr_code_scanner, color: Colors.white),
-        label: const Text('Điểm danh máy', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-      ),
+      
       body: Column(
         children: [
           _buildTopBanner(userName, userEmail),

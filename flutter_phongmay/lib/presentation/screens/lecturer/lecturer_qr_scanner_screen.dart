@@ -10,12 +10,12 @@ class LecturerQRScannerScreen extends StatefulWidget {
   final String expectedRoomName; // 🚀 ĐÃ KHAI BÁO BIẾN ĐỂ HỨNG TÊN PHÒNG
 
   const LecturerQRScannerScreen({
-    Key? key,
+    super.key,
     required this.tenMon,
     required this.maLop,
     required this.scheduleId,
     required this.expectedRoomName, // 🚀 ĐÃ THÊM VÀO CONSTRUCTOR
-  }) : super(key: key);
+  });
 
   @override
   State<LecturerQRScannerScreen> createState() => _LecturerQRScannerScreenState();
@@ -151,7 +151,7 @@ class _LecturerQRScannerScreenState extends State<LecturerQRScannerScreen> {
 class QRScannerOverlay extends StatelessWidget {
   final Color overlayColour;
 
-  const QRScannerOverlay({Key? key, required this.overlayColour}) : super(key: key);
+  const QRScannerOverlay({super.key, required this.overlayColour});
 
   @override
   Widget build(BuildContext context) {

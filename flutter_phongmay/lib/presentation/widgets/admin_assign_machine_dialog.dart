@@ -17,7 +17,7 @@ class AdminAssignMachineDialog extends StatefulWidget {
 
 class _AdminAssignMachineDialogState extends State<AdminAssignMachineDialog> {
   List<dynamic> _availableMachines = [];
-  List<int> _selectedMachineIds = [];
+  final List<int> _selectedMachineIds = [];
   bool _isLoading = true;
   bool _isSubmitting = false;
 

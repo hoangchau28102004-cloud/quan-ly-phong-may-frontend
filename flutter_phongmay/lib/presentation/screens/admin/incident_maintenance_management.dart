@@ -279,8 +279,9 @@ class _IncidentMaintenanceManagementScreenState
                               final originalIncident = incidents.firstWhere((inc) => inc['id'] == selectedIncidentId, orElse: () => null);
                               if (originalIncident != null) {
                                 String newIncidentStatus = originalIncident['trang_thai'];
-                                if (trangThai == 'completed') newIncidentStatus = 'closed';
-                                else if (trangThai == 'in_progress') newIncidentStatus = 'in_progress';
+                                if (trangThai == 'completed') {
+                                  newIncidentStatus = 'closed';
+                                } else if (trangThai == 'in_progress') newIncidentStatus = 'in_progress';
                                 else if (trangThai == 'pending') newIncidentStatus = 'open';
 
                                 if (newIncidentStatus != originalIncident['trang_thai']) {

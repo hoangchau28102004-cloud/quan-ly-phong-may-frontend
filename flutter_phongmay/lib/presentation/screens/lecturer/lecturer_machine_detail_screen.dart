@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'lecturer_attendance_screen.dart';
-import 'report_issue_screen.dart';
+import '../shared/report_issue_screen.dart';
 
 class LecturerMachineDetailScreen extends StatelessWidget {
   final Map<String, dynamic> machineData;
@@ -9,12 +9,12 @@ class LecturerMachineDetailScreen extends StatelessWidget {
   final int scheduleId;
 
   const LecturerMachineDetailScreen({
-    Key? key,
+    super.key,
     required this.machineData,
     required this.tenMon,
     required this.maLop,
     required this.scheduleId,
-  }) : super(key: key);
+  });
 
   void _goToAttendance(BuildContext context) {
     Navigator.pushReplacement(

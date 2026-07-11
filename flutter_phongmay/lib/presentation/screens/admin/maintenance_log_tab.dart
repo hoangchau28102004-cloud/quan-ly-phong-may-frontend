@@ -7,11 +7,11 @@ class MaintenanceLogTab extends StatefulWidget {
   final VoidCallback reloadCallback; 
 
   const MaintenanceLogTab({
-    Key? key,
+    super.key,
     required this.logs,
     required this.tickets,
     required this.reloadCallback,
-  }) : super(key: key);
+  });
 
   @override
   State<MaintenanceLogTab> createState() => _MaintenanceLogTabState();
