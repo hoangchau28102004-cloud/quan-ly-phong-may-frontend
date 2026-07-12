@@ -6,7 +6,7 @@ import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/issue_viewmodel.dart';
 
 class StudentReportIncidentScreen extends StatefulWidget {
-  final String machineId;
+  final int machineId;
   final String machineName;
 
   const StudentReportIncidentScreen({
@@ -56,14 +56,10 @@ class _StudentReportIncidentScreenState
 
     final issueVM = context.read<IssueViewModel>();
     
-    // Tận dụng chuỗi string thay vì ép kiểu int.tryParse()
-    final String scannedCode = (widget.machineName.isNotEmpty && widget.machineName != 'null') 
-        ? widget.machineName 
-        : widget.machineId;
-
+    // Vì widget.machineId đã là int rồi, ta chỉ việc truyền thẳng nó vào!
     final success = await issueVM.sendIssueReport(
       maNguoiBaoCao: context.read<LoginViewModel>().currentUser?.id ?? 0, 
-      maMayTinh: scannedCode, // TRUYỀN CHUỖI STRING MÃ MÁY ("MT-...")
+      maMayTinh: widget.machineId, // 🚀 CHUẨN KIỂU INT TRỰC TIẾP TỪ WIDGET
       loaiSuCo: _selectedIssueType,
       tieuDe: _titleController.text,
       moTa: _descController.text,
@@ -73,7 +69,7 @@ class _StudentReportIncidentScreenState
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Báo cáo thành công! Cán bộ quản lý sẽ kiểm tra sơm nhất.'),
+          content: Text('Báo cáo thành công! Cán bộ quản lý sẽ kiểm tra sớm nhất.'),
           backgroundColor: Colors.green,
         ),
       );

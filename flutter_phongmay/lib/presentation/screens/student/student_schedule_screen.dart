@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart'; 
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../../providers/student_dashboard_viewmodel.dart';
-import '../../providers/login_viewmodel.dart'; 
-import 'student_schedule_detail_screen.dart'; 
+import '../../providers/login_viewmodel.dart';
+import 'student_schedule_detail_screen.dart';
 
 class StudentScheduleScreen extends StatefulWidget {
   const StudentScheduleScreen({super.key});
@@ -13,6 +13,18 @@ class StudentScheduleScreen extends StatefulWidget {
 }
 
 class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
+  int _selectedDayIndex = 0;
+  final List<String> _days = [
+    'Tất cả',
+    'Thứ 2',
+    'Thứ 3',
+    'Thứ 4',
+    'Thứ 5',
+    'Thứ 6',
+    'Thứ 7',
+    'CN',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -21,21 +33,20 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
       final userId = loginVm.currentUser?.id;
       final token = loginVm.token ?? '';
       if (userId != null) {
-        context.read<StudentDashboardViewModel>().fetchStudentSchedules(userId, token);
-      } else {
-        debugPrint("Chưa lấy được ID Sinh viên!");
+        context.read<StudentDashboardViewModel>().fetchStudentSchedules(
+          userId,
+          token,
+        );
       }
     });
   }
 
-  // Helper hàm đổi số "thu" từ API thành chuỗi hiển thị Tiếng Việt
   String _formatThu(dynamic thu) {
-    if (thu == 8) return 'Chủ Nhật';
+    if (thu?.toString() == '8') return 'Chủ Nhật';
     if (thu != null) return 'Thứ $thu';
     return 'Chưa rõ thứ';
   }
 
-  // Helper định dạng ngày hiển thị dd/MM/yyyy cho dễ nhìn
   String _formatNgayHoc(String? ngayHocRaw) {
     if (ngayHocRaw == null || ngayHocRaw.isEmpty) return 'Chưa xếp ngày';
     try {
@@ -53,17 +64,28 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
     final userName = loginVm.currentUser?.hoTen ?? 'Sinh viên';
     final userEmail = loginVm.currentUser?.email ?? 'sv@caothang.edu.vn';
 
+    final rawList = viewModel.filteredSchedules;
+
+    final displayList = _selectedDayIndex == 0
+        ? rawList
+        : rawList.where((item) {
+            final String thuStr = item['thu']?.toString() ?? '0';
+            final int thuInt = int.tryParse(thuStr) ?? 0;
+            return thuInt == (_selectedDayIndex + 1);
+          }).toList();
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      
       body: Column(
         children: [
           _buildTopBanner(userName, userEmail),
-          _buildHorizontalCalendar(viewModel),
+          _buildHorizontalCalendar(),
           Expanded(
             child: viewModel.isLoadingSchedule
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E3A8A)))
-                : _buildScheduleList(viewModel),
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF1E3A8A)),
+                  )
+                : _buildScheduleList(displayList),
           ),
         ],
       ),
@@ -132,21 +154,21 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
     );
   }
 
-  Widget _buildHorizontalCalendar(StudentDashboardViewModel viewModel) {
+  Widget _buildHorizontalCalendar() {
     return Container(
       height: 46,
       margin: const EdgeInsets.only(top: 15, bottom: 5),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: viewModel.days.length,
+        itemCount: _days.length,
         itemBuilder: (context, index) {
-          bool isSelected = viewModel.selectedDayIndex == index;
+          bool isSelected = _selectedDayIndex == index;
           return Padding(
             key: ValueKey(index),
             padding: const EdgeInsets.only(right: 8),
             child: ChoiceChip(
-              label: Text(viewModel.days[index]),
+              label: Text(_days[index]),
               selected: isSelected,
               selectedColor: const Color(0xFF1E3A8A),
               backgroundColor: Colors.white,
@@ -156,9 +178,17 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
-                side: BorderSide(color: isSelected ? const Color(0xFF1E3A8A) : Colors.grey.shade300),
+                side: BorderSide(
+                  color: isSelected
+                      ? const Color(0xFF1E3A8A)
+                      : Colors.grey.shade300,
+                ),
               ),
-              onSelected: (_) => viewModel.changeSelectedDay(index),
+              onSelected: (_) {
+                setState(() {
+                  _selectedDayIndex = index;
+                });
+              },
             ),
           );
         },
@@ -166,15 +196,24 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
     );
   }
 
-  Widget _buildScheduleList(StudentDashboardViewModel viewModel) {
-    if (viewModel.filteredSchedules.isEmpty) {
+  Widget _buildScheduleList(List<dynamic> displayList) {
+    if (displayList.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.calendar_today_outlined, size: 64, color: Colors.grey.shade300),
+            Icon(
+              Icons.calendar_today_outlined,
+              size: 64,
+              color: Colors.grey.shade300,
+            ),
             const SizedBox(height: 12),
-            Text('Hôm nay bạn không có lịch thực hành nào', style: TextStyle(color: Colors.grey.shade500, fontSize: 15)),
+            Text(
+              _selectedDayIndex == 0
+                  ? 'Hiện chưa có lịch thực hành nào'
+                  : 'Bạn không có lịch học vào ${_days[_selectedDayIndex]}',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 15),
+            ),
           ],
         ),
       );
@@ -182,10 +221,40 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      itemCount: viewModel.filteredSchedules.length,
+      itemCount: displayList.length,
       itemBuilder: (context, index) {
-        final item = viewModel.filteredSchedules[index];
-        bool isDone = item['trang_thai'] == 'completed';
+        final item = displayList[index];
+
+        // 🚀 1. LÔ-GIC XỬ LÝ BADGE (NHÃN) THEO THỜI GIAN THỰC
+        bool isCompleted = item['trang_thai'] == 'completed';
+        String statusText = 'Lịch sắp tới';
+        Color statusTextColor = Colors.orange.shade700;
+
+        final rawDate = item['ngay_hoc']?.toString() ?? '';
+        DateTime? classDate = DateTime.tryParse(rawDate);
+
+        if (isCompleted) {
+          statusText = 'Đã học xong';
+          statusTextColor = Colors.grey.shade600;
+        } else if (classDate != null) {
+          final now = DateTime.now();
+          final today = DateTime(now.year, now.month, now.day);
+          final cDate = DateTime(
+            classDate.year,
+            classDate.month,
+            classDate.day,
+          );
+
+          if (cDate.isBefore(today)) {
+            // Lịch cũ (VD: 11/7 mà nay là 12/7) -> Ép thành Đã qua
+            statusText = 'Đã qua';
+            statusTextColor = Colors.grey.shade600;
+          } else if (cDate.isAtSameMomentAs(today)) {
+            // Lịch ngày hôm nay
+            statusText = 'Hôm nay';
+            statusTextColor = Colors.green.shade700;
+          }
+        }
 
         return Card(
           elevation: 0,
@@ -196,13 +265,13 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
           ),
           child: InkWell(
             borderRadius: BorderRadius.circular(14),
-            // 🚀 ĐÃ FIX: Chuyển hướng sang màn hình Chi tiết lịch thực hành của sinh viên
             onTap: () {
               if (item['id'] != null) {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => StudentScheduleDetailScreen(scheduleId: item['id']),
+                    builder: (context) =>
+                        StudentScheduleDetailScreen(scheduleId: item['id']),
                   ),
                 );
               }
@@ -215,40 +284,66 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
-                          color: isDone ? Colors.grey.shade100 : Colors.blue.shade50,
+                          // Nếu nhãn là xám (Đã qua/Đã xong) thì khung tag cũng mờ đi
+                          color: (statusTextColor == Colors.grey.shade600)
+                              ? Colors.grey.shade100
+                              : Colors.blue.shade50,
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
                           item['loai_lich'] ?? 'Thực hành',
-                          style: TextStyle(color: isDone ? Colors.grey : const Color(0xFF1E3A8A), fontSize: 11, fontWeight: FontWeight.bold),
+                          style: TextStyle(
+                            color: (statusTextColor == Colors.grey.shade600)
+                                ? Colors.grey.shade600
+                                : const Color(0xFF1E3A8A),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const Spacer(),
+                      // 🚀 2. GẮN NHÃN SAU KHI ĐÃ LỌC LOGIC
                       Text(
-                        isDone ? 'Đã học xong' : 'Lịch sắp tới',
-                        style: TextStyle(color: isDone ? Colors.grey : Colors.orange.shade700, fontSize: 12, fontWeight: FontWeight.w500),
+                        statusText,
+                        style: TextStyle(
+                          color: statusTextColor,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 10),
                   Text(
                     '${item['ten_mon'] ?? 'Môn học'} - ${item['ma_lhp_str'] ?? ''}',
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   const Divider(height: 1, thickness: 0.5),
                   const SizedBox(height: 12),
-                  _buildCardRow(Icons.pin_drop_outlined, item['ten_phong'] ?? 'Chưa xếp phòng'),
-                  const SizedBox(height: 6),
-                  // 🚀 ĐÃ FIX KEY JSON: Map chuẩn xác theo 'thu', 'ngay_hoc', 'tiet_bat_dau', 'tiet_ket_thuc' từ API
                   _buildCardRow(
-                    Icons.schedule_outlined, 
+                    Icons.pin_drop_outlined,
+                    item['ten_phong'] ?? 'Chưa xếp phòng',
+                  ),
+                  const SizedBox(height: 6),
+                  _buildCardRow(
+                    Icons.schedule_outlined,
                     '${_formatThu(item['thu'])} (${_formatNgayHoc(item['ngay_hoc'])}) • Tiết ${item['tiet_bat_dau'] ?? '?'} - ${item['tiet_ket_thuc'] ?? '?'}',
                   ),
                   const SizedBox(height: 6),
-                  _buildCardRow(Icons.account_box_outlined, item['ten_giang_vien'] ?? 'Đang cập nhật'),
+                  _buildCardRow(
+                    Icons.account_box_outlined,
+                    item['ten_giang_vien'] ?? 'Đang cập nhật',
+                  ),
                 ],
               ),
             ),
@@ -265,7 +360,7 @@ class _StudentScheduleScreenState extends State<StudentScheduleScreen> {
         const SizedBox(width: 8),
         Expanded(
           child: Text(
-            value, 
+            value,
             style: TextStyle(color: Colors.grey.shade700, fontSize: 13.5),
             overflow: TextOverflow.ellipsis,
           ),

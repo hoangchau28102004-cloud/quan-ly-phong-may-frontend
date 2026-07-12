@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart'; // 🚀 Bổ sung thư viện xử lý ngày tháng
 import '../../../data/datasources/api_service.dart';
 import 'student_qr_scanner_screen.dart';
 
@@ -31,14 +32,12 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
           detailData = decoded['data'];
         });
       } else {
-        // Bắt lỗi khi Backend trả về false
         final msg = decoded?['message'] ?? 'Không tìm thấy dữ liệu từ Server';
         if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Thất bại: $msg'), backgroundColor: Colors.red));
       }
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Lỗi kết nối: $e'), backgroundColor: Colors.red));
     } finally {
-      // 🚀 BÍ QUYẾT Ở ĐÂY: Dù thành công hay thất bại, LUÔN LUÔN tắt vòng xoay loading
       if (mounted) {
         setState(() {
           isLoading = false;
@@ -49,11 +48,49 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
 
   @override
   Widget build(BuildContext context) {
+    bool isPast = false;
+    bool isToday = false;
+    bool isFuture = false;
+    bool isCompleted = false;
+
+    if (detailData != null) {
+      isCompleted = detailData!['trang_thai'] == 'completed';
+      
+      final rawDate = detailData!['ngay_hoc_cu_the']?.toString().trim() ?? '';
+      DateTime? classDate;
+
+      // 🚀 LÔ-GIC PARSE NGÀY "BAO CHUẨN" CẢ TA LẪN TÂY
+      if (rawDate.isNotEmpty) {
+        try {
+          if (rawDate.contains('/')) {
+            // Nếu API trả dd/MM/yyyy (VD: 10/07/2027)
+            classDate = DateFormat('dd/MM/yyyy').parse(rawDate);
+          } else {
+            // Nếu API trả yyyy-MM-dd
+            classDate = DateTime.tryParse(rawDate);
+          }
+        } catch (e) {
+          debugPrint('Lỗi đọc ngày: $e');
+        }
+      }
+      
+      if (classDate != null) {
+        final now = DateTime.now();
+        // Ép ngày về 00:00:00 để so sánh chuẩn xác
+        final today = DateTime(now.year, now.month, now.day);
+        final cDate = DateTime(classDate.year, classDate.month, classDate.day);
+
+        isPast = cDate.isBefore(today);
+        isToday = cDate.isAtSameMomentAs(today);
+        isFuture = cDate.isAfter(today);
+      }
+    }
+
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: const Text('Chi tiết buổi thực hành', style: TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: const Color(0xFF1E3A8A), // Màu xanh Navy chuẩn app bạn
+        backgroundColor: const Color(0xFF1E3A8A), 
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -61,23 +98,42 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
           ? const Center(child: CircularProgressIndicator())
           : detailData == null
               ? const Center(child: Text('Không tải được dữ liệu'))
-              : _buildStudentView(),
-      // Nút điểm danh cố định dưới cùng cho sinh viên
-      bottomNavigationBar: detailData != null ? _buildBottomButton() : null,
+              : _buildStudentView(isPast, isToday, isFuture, isCompleted), 
+      
+      bottomNavigationBar: detailData != null 
+          ? _buildBottomButton(isPast, isToday, isFuture, isCompleted) 
+          : null,
     );
   }
 
-  Widget _buildStudentView() {
+  Widget _buildStudentView(bool isPast, bool isToday, bool isFuture, bool isCompleted) {
     final siSo = detailData!['si_so_thuc_te'] ?? 0;
     final soMay = detailData!['so_may_tinh'] ?? 0;
-    final isShortage = soMay < siSo; // Cảnh báo thiếu máy
+    final isShortage = soMay < siSo; 
+
+    String statusText = 'Chưa rõ';
+    Color statusColor = Colors.grey;
+    Color statusBg = Colors.grey.shade100;
+
+    if (isCompleted || isPast) {
+      statusText = 'Đã học xong';
+      statusColor = Colors.grey.shade600;
+      statusBg = Colors.grey.shade200;
+    } else if (isToday) {
+      statusText = 'Đang diễn ra';
+      statusColor = Colors.green.shade700;
+      statusBg = Colors.green.shade50;
+    } else if (isFuture) {
+      statusText = 'Lịch sắp tới';
+      statusColor = Colors.orange.shade700;
+      statusBg = Colors.orange.shade50;
+    }
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // 1. Thẻ thông tin Môn học
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -101,8 +157,8 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
-                      child: const Text('Sắp diễn ra', style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(8)),
+                      child: Text(statusText, style: TextStyle(color: statusColor, fontWeight: FontWeight.bold)),
                     ),
                   ],
                 ),
@@ -125,7 +181,6 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
           const Text('TÌNH TRẠNG PHÒNG MÁY', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
           const SizedBox(height: 12),
 
-          // 2. Thống kê Sĩ số vs Số máy
           Row(
             children: [
               Expanded(
@@ -150,8 +205,7 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
             ],
           ),
           
-          // Cảnh báo nếu thiếu máy
-          if (isShortage) ...[
+          if (isShortage && !isPast) ...[
             const SizedBox(height: 16),
             Container(
               padding: const EdgeInsets.all(16),
@@ -223,28 +277,41 @@ class _StudentScheduleDetailScreenState extends State<StudentScheduleDetailScree
     );
   }
 
-  // Nút Điểm danh máy chuẩn góc dưới màn hình
-  Widget _buildBottomButton() {
+  Widget _buildBottomButton(bool isPast, bool isToday, bool isFuture, bool isCompleted) {
+    bool canCheckIn = isToday && !isCompleted;
+    
+    String buttonText = 'ĐIỂM DANH MÁY';
+    if (isPast || isCompleted) buttonText = 'ĐÃ HỌC XONG';
+    if (isFuture) buttonText = 'CHƯA ĐẾN GIỜ'; // ĐỔI THÀNH DÒNG NÀY ĐỂ RÕ RÀNG
+
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: const Offset(0, -2))],
+        boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
       ),
       child: SafeArea(
         child: ElevatedButton.icon(
-          onPressed: () {Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => StudentQRScannerScreen(scheduleId: widget.scheduleId),
-              ),
-            );
-          },
-          icon: const Icon(Icons.qr_code_scanner, size: 24),
-          label: const Text('ĐIỂM DANH MÁY', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          onPressed: canCheckIn 
+            ? () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => StudentQRScannerScreen(scheduleId: widget.scheduleId),
+                  ),
+                );
+              }
+            : null, 
+          icon: Icon(
+            isPast || isCompleted ? Icons.check_circle : (isFuture ? Icons.lock_clock : Icons.qr_code_scanner), 
+            size: 24
+          ),
+          label: Text(buttonText, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1E3A8A), // Màu xanh Navy
+            backgroundColor: const Color(0xFF1E3A8A),
             foregroundColor: Colors.white,
+            disabledBackgroundColor: Colors.grey.shade300,
+            disabledForegroundColor: Colors.grey.shade600,
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),

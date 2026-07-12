@@ -32,13 +32,12 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
     if (_isProcessing) return;
     _isProcessing = true; // Khóa công tắc NGAY LẬP TỨC
 
-    // 2. DỪNG HẲN CAMERA ĐỂ TRÁNH QUÉT NHẦM 60fps
-    _cameraController.stop();
+    // ❌ ĐÃ XÓA _cameraController.stop() Ở ĐÂY!
 
     final barcodes = capture.barcodes;
     if (barcodes.isEmpty || (barcodes.first.rawValue ?? '').isEmpty) {
-      _isProcessing = false;
-      _cameraController.start();
+      _isProcessing = false; // Mở khóa nếu không đọc được gì
+      // ❌ ĐÃ XÓA _cameraController.start() Ở ĐÂY!
       return;
     }
 
@@ -56,7 +55,7 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
         const SnackBar(content: Text('Lỗi: Không tìm thấy thông tin Sinh viên!')),
       );
       setState(() => _isProcessing = false);
-      _cameraController.start(); 
+      // ❌ ĐÃ XÓA _cameraController.start() Ở ĐÂY!
       return;
     }
 
@@ -89,11 +88,11 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
         icon: Icons.error_rounded,
         color: Colors.redAccent,
         title: 'Thông báo',
-        content: responseData['message'] ?? 'Mã QR không hợp lệ!', // Lấy trực tiếp câu chửi từ Backend
+        content: responseData['message'] ?? 'Mã QR không hợp lệ!', 
         onClose: () {
           Navigator.pop(context); // Đóng popup
-          setState(() => _isProcessing = false); // Mở khóa
-          _cameraController.start(); // Mở lại camera cho sinh viên quét tiếp
+          setState(() => _isProcessing = false); // Mở khóa cho phép quét tiếp
+          // ❌ ĐÃ XÓA _cameraController.start() Ở ĐÂY!
         },
       );
     }

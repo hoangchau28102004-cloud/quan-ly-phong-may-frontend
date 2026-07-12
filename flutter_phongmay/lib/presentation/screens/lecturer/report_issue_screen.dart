@@ -17,8 +17,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   List<dynamic> _rooms = [];
   int? _selectedRoomId;
   
-  // ĐỔI SANG STRING ĐỂ LƯU MÃ MÁY (VD: "MT-4318-001")
-  String? _selectedComputerCode; 
+  // 🚀 Đã đổi về int để chuẩn cấu trúc CSDL
+  int? _selectedComputerId;
 
   String _selectedType = 'Phần cứng';
   String _selectedSeverity = 'normal';
@@ -30,6 +30,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   void initState() {
     super.initState();
     _loadRooms();
+  }
+
+  @override
+  void dispose() {
+    _titleCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _loadRooms() async {
@@ -47,8 +54,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   void _submitReport() async {
-    // KIỂM TRA BIẾN STRING THAY VÌ INT
-    if (!_formKey.currentState!.validate() || _selectedComputerCode == null) {
+    // 🚀 Check biến ID (Số)
+    if (!_formKey.currentState!.validate() || _selectedComputerId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng chọn đầy đủ thông tin máy lỗi!'),
@@ -63,7 +70,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
     final success = await context.read<IssueViewModel>().sendIssueReport(
       maNguoiBaoCao: user.id,
-      maMayTinh: _selectedComputerCode!,
+      maMayTinh: _selectedComputerId!, // 🚀 Gửi đúng chuẩn Int
       loaiSuCo: _selectedType,
       tieuDe: _titleCtrl.text,
       moTa: _descCtrl.text,
@@ -78,6 +85,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         ),
       );
       Navigator.pop(context);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lỗi khi gửi báo cáo, vui lòng thử lại!'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -90,6 +104,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
         title: const Text('Báo Cáo Sự Cố Máy Tính'),
         backgroundColor: const Color(0xFF193D87),
         foregroundColor: Colors.white,
+        elevation: 0,
       ),
       body: issueVM.isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -99,137 +114,129 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                 key: _formKey,
                 child: ListView(
                   children: [
+                    const Text('Thông tin thiết bị', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    
                     // CHỌN PHÒNG MÁY
                     DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Chọn phòng học',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      initialValue: _selectedRoomId,
-                      items: _rooms
-                          .map(
-                            (r) => DropdownMenuItem<int>(
-                              value: r['id'],
-                              child: Text(r['ten_phong']),
-                            ),
-                          )
-                          .toList(),
+                      value: _selectedRoomId,
+                      items: _rooms.map((r) => DropdownMenuItem<int>(
+                              value: int.tryParse(r['id']?.toString() ?? '') ?? 0,
+                              child: Text(r['ten_phong']?.toString() ?? ''),
+                            )).toList(),
                       onChanged: (val) {
                         setState(() {
                           _selectedRoomId = val;
-                          _selectedComputerCode = null; // Reset máy tính khi đổi phòng học
+                          _selectedComputerId = null; // 🚀 Reset ID máy tính khi đổi phòng
                         });
                         if (val != null) {
                           context.read<IssueViewModel>().fetchComputers(val);
                         }
                       },
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // CHỌN MÁY TÍNH BỊ LỖI
-                    DropdownButtonFormField<String>( // CHUYỂN KIỂU SANG STRING
-                      decoration: const InputDecoration(
+                    DropdownButtonFormField<int>( // 🚀 ĐỔI SANG INT
+                      decoration: InputDecoration(
                         labelText: 'Chọn máy tính bị lỗi',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      initialValue: _selectedComputerCode,
-                      items: issueVM.computers
-                          .map(
-                            (c) => DropdownMenuItem<String>(
-                              value: c['ma_may'].toString(), // LẤY ma_may THAY VÌ id
-                              child: Text('${c['ten_may']} (${c['ma_may']})'),
-                            ),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => _selectedComputerCode = val),
+                      value: _selectedComputerId,
+                      items: issueVM.computers.map((c) {
+                        // 🚀 Kỹ thuật Parse JSON siêu an toàn
+                        final int parsedId = int.tryParse(c['id']?.toString() ?? '') ?? 0;
+                        return DropdownMenuItem<int>(
+                          value: parsedId,
+                          child: Text('${c['ten_may']} (${c['ma_may']})'),
+                        );
+                      }).toList(),
+                      onChanged: (val) => setState(() => _selectedComputerId = val),
                     ),
+                    
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 12),
+                    const Text('Chi tiết sự cố', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 12),
 
                     // CHỌN LOẠI SỰ CỐ
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Loại sự cố',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       initialValue: _selectedType,
-                      items:
-                          [
-                                'Phần cứng',
-                                'Phần mềm',
-                                'Mạng internet',
-                                'Thiết bị ngoại vi',
-                              ]
-                              .map(
-                                (t) =>
-                                    DropdownMenuItem(value: t, child: Text(t)),
-                              )
-                              .toList(),
+                      items: [
+                        'Phần cứng',
+                        'Phần mềm',
+                        'Mạng internet',
+                        'Thiết bị ngoại vi',
+                      ].map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
                       onChanged: (val) => setState(() => _selectedType = val!),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // MỨC ĐỘ NGUY HIỂM
                     DropdownButtonFormField<String>(
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Mức độ nghiêm trọng',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                       initialValue: _selectedSeverity,
                       items: const [
-                        DropdownMenuItem(
-                          value: 'low',
-                          child: Text('Thấp (Vẫn dùng được)'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'normal',
-                          child: Text('Bình thường'),
-                        ),
-                        DropdownMenuItem(
-                          value: 'high',
-                          child: Text('Cao (Hỏng hẳn/Không thể học)'),
-                        ),
+                        DropdownMenuItem(value: 'low', child: Text('Thấp (Vẫn dùng được)')),
+                        DropdownMenuItem(value: 'normal', child: Text('Bình thường')),
+                        DropdownMenuItem(value: 'high', child: Text('Cao (Hỏng hẳn/Không thể học)')),
                       ],
-                      onChanged: (val) =>
-                          setState(() => _selectedSeverity = val!),
+                      onChanged: (val) => setState(() => _selectedSeverity = val!),
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // TIÊU ĐỀ LỖI
                     TextFormField(
                       controller: _titleCtrl,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Tiêu đề sự cố',
                         hintText: 'Ví dụ: Máy không lên màn hình',
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      validator: (v) =>
-                          v!.isEmpty ? 'Vui lòng nhập tiêu đề' : null,
+                      validator: (v) => v!.isEmpty ? 'Vui lòng nhập tiêu đề' : null,
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
 
                     // MÔ TẢ CHI TIẾT
                     TextFormField(
                       controller: _descCtrl,
                       maxLines: 4,
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                         labelText: 'Mô tả chi tiết tình trạng',
-                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 30),
 
                     // NÚT GỬI
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF193D87),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                      ),
-                      onPressed: _submitReport,
-                      child: const Text(
-                        'Gửi Báo Cáo',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                    SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF193D87),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        onPressed: _submitReport,
+                        child: const Text(
+                          'Gửi Báo Cáo',
+                          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),

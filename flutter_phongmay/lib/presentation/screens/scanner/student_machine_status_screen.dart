@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import '../student/student_report_incident_screen.dart'; 
+import '../student/student_report_incident_screen.dart';
 
 class StudentMachineStatusScreen extends StatelessWidget {
   final String qrData;
-  final Map<String, dynamic> machineData; // 🚀 ĐÃ FIX: Nhận Data thật từ API
+  final Map<String, dynamic> machineData;
   
   const StudentMachineStatusScreen({
     super.key, 
@@ -35,7 +35,7 @@ class StudentMachineStatusScreen extends StatelessWidget {
                 children: [
                   const Text('Thiết bị bạn chuẩn bị sử dụng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 12),
-                  _buildMachineInfoCard(), // Gọi thẻ hiển thị data thật
+                  _buildMachineInfoCard(), 
                   const SizedBox(height: 24),
                   const Text('Lưu ý từ phòng máy', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
                   const SizedBox(height: 12),
@@ -72,12 +72,11 @@ class StudentMachineStatusScreen extends StatelessWidget {
   }
 
   Widget _buildMachineInfoCard() {
-    // 🚀 ĐÃ FIX: Map dữ liệu thật từ Database (Bảng may_tinh)
-    String viTri = machineData['vi_tri'] ?? 'Chưa cập nhật';
-    String tenMay = machineData['ten_may'] ?? 'Máy tính';
-    String cpu = machineData['bo_xu_ly'] ?? 'Đang cập nhật';
-    String ram = machineData['ram'] ?? 'Đang cập nhật';
-    String monitor = machineData['man_hinh'] ?? 'Đang cập nhật';
+    String viTri = machineData['vi_tri']?.toString() ?? 'Chưa cập nhật';
+    String tenMay = machineData['ten_may']?.toString() ?? 'Máy tính';
+    String cpu = machineData['bo_xu_ly']?.toString() ?? 'Đang cập nhật';
+    String ram = machineData['ram']?.toString() ?? 'Đang cập nhật';
+    String monitor = machineData['man_hinh']?.toString() ?? 'Đang cập nhật';
     String phuKien = '${machineData['ban_phim'] ?? ''} / ${machineData['chuot'] ?? ''}';
     if (phuKien == ' / ') phuKien = 'Đang cập nhật';
 
@@ -141,7 +140,6 @@ class StudentMachineStatusScreen extends StatelessWidget {
         const SizedBox(width: 12),
         Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
         const Spacer(),
-        // Dùng Expanded để text dài không bị tràn màn hình
         Expanded(
           flex: 2,
           child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14), overflow: TextOverflow.ellipsis, maxLines: 2),
@@ -176,13 +174,15 @@ class StudentMachineStatusScreen extends StatelessWidget {
               height: 48,
               child: OutlinedButton(
                 onPressed: () {
-                  // 🚀 ĐÃ FIX: Chuyển sang màn hình Báo Cáo, mang theo ID máy tính
+                  // 🚀 ĐÃ BỌC THÉP ÉP KIỂU INT AN TOÀN
+                  final int safeMachineId = int.tryParse(machineData['id']?.toString() ?? '') ?? 0;
+                  
                   Navigator.push(
                     context,
                     MaterialPageRoute(
                       builder: (context) => StudentReportIncidentScreen(
-                        machineId: machineData['id'].toString(), 
-                        machineName: machineData['ten_may'] ?? 'Máy tính',
+                        machineId: safeMachineId, 
+                        machineName: machineData['ten_may']?.toString() ?? 'Máy tính',
                       ),
                     ),
                   );

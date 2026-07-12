@@ -6,6 +6,8 @@ import 'package:flutter_phongmay/presentation/screens/lecturer/room_booking_scre
 import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_profile_screen.dart';
 import 'package:intl/intl.dart';
 import 'lecturer_qr_scanner_screen.dart';
+// 🚀 QUAN TRỌNG: Thêm import màn hình Điểm danh để khi bấm "Xem lịch sử" nó biết đường chạy qua
+import 'lecturer_attendance_screen.dart'; 
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -243,6 +245,17 @@ class _TeacherHomeState extends State<TeacherHome> {
       badgeColor = Colors.orange;
     }
 
+    // 🚀 LÔ-GIC XỬ LÝ 3 MỐC THỜI GIAN
+    final apiDate = DateTime.tryParse(item.ngayHoc) ?? DateTime.now();
+    final scheduleDate = DateTime(apiDate.year, apiDate.month, apiDate.day);
+    
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+
+    final isFuture = scheduleDate.isAfter(today);
+    final isPast = scheduleDate.isBefore(today);
+    final isToday = scheduleDate.isAtSameMomentAs(today);
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -287,31 +300,54 @@ class _TeacherHomeState extends State<TeacherHome> {
               _buildInfoRow(Icons.access_time, 'Thời gian:', '${item.gioBatDau} - ${item.gioKetThuc}'),
               _buildInfoRow(Icons.date_range, 'Ngày:', '${item.ngayHoc} ($thuStr)'),
               const SizedBox(height: 16),
+              
+              // 🚀 NÚT ĐIỂM DANH THÔNG MINH
               SizedBox(
                 width: double.infinity,
                 height: 45,
                 child: ElevatedButton(
+                  onPressed: isFuture
+                      ? null // Tương lai: KHÓA NÚT
+                      : () {
+                          if (isToday) {
+                            // Hôm nay: Chuyển sang màn hình Quét QR
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LecturerQRScannerScreen(
+                                  tenMon: item.tenMon,
+                                  maLop: item.maLop,
+                                  scheduleId: item.id ?? 0,
+                                  expectedRoomName: item.tenPhong,
+                                ),
+                              ),
+                            );
+                          } else if (isPast) {
+                            // Quá khứ: Đi thẳng vào màn điểm danh để xem lịch sử
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LecturerAttendanceScreen(
+                                  tenMon: item.tenMon,
+                                  maLop: item.maLop,
+                                  scheduleId: item.id ?? 0,
+                                ),
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: kAppBlue,
+                    backgroundColor: isPast ? Colors.teal.shade600 : kAppBlue,
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    disabledForegroundColor: Colors.grey.shade600,
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                   ),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => LecturerQRScannerScreen(
-                        tenMon: item.tenMon, 
-                        maLop: item.maLop,
-                        // Dùng item.id ?? 0 để an toàn, nếu id null thì truyền 0
-                        scheduleId: item.id ?? 0, 
-                        expectedRoomName: item.tenPhong,
-                      ),
-                    ),
-                  );
-                },
-                  child: const Text(
-                    'Điểm Danh Sinh Viên',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                  child: Text(
+                    isFuture
+                        ? 'Chưa đến thời gian'
+                        : (isToday ? 'Điểm Danh Sinh Viên' : 'Xem lịch sử điểm danh'),
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
                   ),
                 ),
               ),

@@ -25,9 +25,10 @@ class IssueViewModel extends ChangeNotifier {
   }
 
   // Gửi form báo lỗi lên hệ thống
+  // Gửi form báo lỗi lên hệ thống
   Future<bool> sendIssueReport({
     required int maNguoiBaoCao,
-    required String maMayTinh, // QUAN TRỌNG: Ép kiểu thành String
+    required int maMayTinh, // Giữ nguyên là kiểu int nhé đại ca
     required String loaiSuCo,
     required String tieuDe,
     required String moTa,
@@ -36,10 +37,9 @@ class IssueViewModel extends ChangeNotifier {
     isLoading = true;
     notifyListeners();
     try {
-      // Đảm bảo trỏ đúng endpoint là /bao-cao-su-co
-      final res = await ApiService.post('/bao-cao-su-co', {
+      final res = await ApiService.post('/issues/report', {
         'ma_nguoi_bao_cao': maNguoiBaoCao,
-        'ma_may_tinh': maMayTinh, // Truyền thẳng chuỗi quét được xuống đây
+        'ma_may_tinh': maMayTinh, // Truyền thẳng int xuống Backend
         'loai_su_co': loaiSuCo,
         'tieu_de': tieuDe,
         'mo_ta': moTa,

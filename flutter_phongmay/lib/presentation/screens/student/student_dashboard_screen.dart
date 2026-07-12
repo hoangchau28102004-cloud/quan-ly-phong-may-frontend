@@ -15,74 +15,68 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Bóc token và userId từ lúc sinh viên đăng nhập
-      final loginVm = context.read<LoginViewModel>();
-      final userId = loginVm.currentUser?.id;
-      final token = loginVm.token ?? '';
-
-      if (userId != null) {
-        // Truyền thẳng vào hàm
-        context.read<StudentDashboardViewModel>().loadAll(userId, token); 
-      }
+      _loadDashboardData();
     });
+  }
+
+  Future<void> _loadDashboardData() async {
+    final loginVm = context.read<LoginViewModel>();
+    final userId = loginVm.currentUser?.id;
+    final token = loginVm.token ?? '';
+
+    if (userId != null) {
+      await context.read<StudentDashboardViewModel>().loadAll(userId, token);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final vm = context.watch<StudentDashboardViewModel>();
-    
-    // Lấy thông tin User từ LoginViewModel
     final loginVm = context.watch<LoginViewModel>();
+    
     final userName = loginVm.currentUser?.hoTen ?? 'Sinh viên';
     final userEmail = loginVm.currentUser?.email ?? 'sv@caothang.edu.vn';
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      // KHÔNG CÓ NÚT QUÉT QR HAY BỘ LỌC THỨ Ở MÀN HÌNH TỔNG QUAN NÀY
-      body: vm.loading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E3A8A)))
-          : Column(
-              children: [
-                // 1. Header bo góc Avatar hình vuông
-                _buildHeader(userName, userEmail),
-                
-                // 2. Phần nội dung cuộn được ở dưới
-                Expanded(
-                  child: SingleChildScrollView(
+      body: Column(
+        children: [
+          _buildHeader(userName, userEmail),
+          Expanded(
+            child: RefreshIndicator(
+              color: const Color(0xFF1E3A8A),
+              onRefresh: _loadDashboardData,
+              child: vm.loading
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E3A8A)))
+                : SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _buildStatisticsGrid(vm),
                         const SizedBox(height: 24),
-                        
                         _buildSectionTitle('Buổi học sắp tới'),
                         _buildUpcomingList(vm.upcoming),
-                        
                         const SizedBox(height: 24),
-                        
                         _buildSectionTitle('Điểm danh gần đây'),
                         _buildRecentAttendance(vm.recentAttendance),
-                        
                         const SizedBox(height: 24), 
                       ],
                     ),
                   ),
-                ),
-              ],
             ),
+          ),
+        ],
+      ),
     );
   }
-
-  // ==========================================
-  // WIDGET COMPONENTS
-  // ==========================================
 
   Widget _buildHeader(String name, String email) {
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        color: Color(0xFF1E3A8A), // Màu xanh Cao Thắng
+        color: Color(0xFF1E3A8A),
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -95,43 +89,21 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Avatar hình vuông bo góc giống Giảng viên
               Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.person,
-                  color: Color(0xFF1E3A8A),
-                  size: 34,
-                ),
+                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.person, color: Color(0xFF1E3A8A), size: 34),
               ),
               const SizedBox(width: 16),
-              // Thông tin Tên & Email
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, // Ôm sát nội dung
+                  mainAxisSize: MainAxisSize.min, 
                   children: [
-                    Text(
-                      name,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
                     const SizedBox(height: 4),
-                    Text(
-                      email,
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 14,
-                      ),
-                    ),
+                    Text(email, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
                   ],
                 ),
               ),
@@ -194,10 +166,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87),
-      ),
+      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
     );
   }
 
@@ -205,6 +174,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     if (upcomingList.isEmpty) return _emptyState('Không có lịch học sắp tới.');
     return Column(
       children: upcomingList.map((item) {
+        // Móc đúng Key từ câu SQL của đại ca ở Backend
+        final tenMon = item['ten_mon'] ?? 'Môn học chưa rõ';
+        final thoiGian = item['thoi_gian'] ?? item['thoiGian'] ?? 'Đang cập nhật';
+        final phong = item['ten_phong'] ?? 'Đang cập nhật';
+
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -216,8 +190,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
               child: Icon(Icons.timer_outlined, color: Colors.orange.shade700),
             ),
-            title: Text(item['ten_mon'] ?? 'Chưa rõ', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Thời gian: ${item['thoi_gian']} | Phòng: ${item['phong']}'),
+            title: Text(tenMon, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Thời gian: $thoiGian\nPhòng: $phong'),
           ),
         );
       }).toList(),
@@ -228,6 +202,15 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     if (recentList.isEmpty) return _emptyState('Chưa có bản ghi điểm danh.');
     return Column(
       children: recentList.map((item) {
+        // Móc đúng Key từ câu SQL của đại ca
+        final tenMon = item['ten_mon'] ?? 'Môn học chưa rõ';
+        final rawTrangThai = item['trang_thai'] ?? 'Không rõ';
+        final thoiGian = item['thoi_gian'] ?? item['thoiGian'] ?? '';
+
+        String trangThaiStr = rawTrangThai;
+        if (rawTrangThai == 'present') trangThaiStr = 'Có mặt';
+        if (rawTrangThai == 'absent') trangThaiStr = 'Vắng mặt';
+
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -239,8 +222,8 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
               child: const Icon(Icons.qr_code_scanner, color: Colors.green),
             ),
-            title: Text(item['ten_mon'] ?? 'Chưa rõ', style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Trạng thái: ${item['trang_thai']} - ${item['thoi_gian']}'),
+            title: Text(tenMon, style: const TextStyle(fontWeight: FontWeight.bold)),
+            subtitle: Text('Trạng thái: $trangThaiStr\n$thoiGian'),
           ),
         );
       }).toList(),
