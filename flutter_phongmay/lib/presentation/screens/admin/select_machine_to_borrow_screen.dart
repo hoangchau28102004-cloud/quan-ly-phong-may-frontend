@@ -21,6 +21,10 @@ class _SelectMachineToBorrowScreenState
   List<Map<String, dynamic>> _availableMachines = [];
   List<Map<String, dynamic>> _rooms = [];
   
+  // 🚀 THÊM: Biến quản lý bộ lọc phòng máy
+  String _selectedRoomFilter = 'Tất cả';
+  List<String> _availableRoomsList = ['Tất cả'];
+  
   // Set lưu trữ ID của các máy được tick chọn
   final Set<int> _selectedMachineIds = {};
   
@@ -55,6 +59,17 @@ class _SelectMachineToBorrowScreenState
           final status = (m['trang_thai'] ?? '').toString().toLowerCase();
           return status == 'active';
         }).toList();
+
+        // 🚀 THÊM: Tạo danh sách các phòng máy (bỏ trùng lặp) để đưa lên thanh Filter
+        final Set<String> roomNames = {};
+        for (var m in _availableMachines) {
+          final room = _rooms.firstWhere(
+            (r) => r['id'].toString() == m['ma_phong'].toString(),
+            orElse: () => {},
+          );
+          roomNames.add(room['ten_phong'] ?? 'Khác');
+        }
+        _availableRoomsList = ['Tất cả', ...roomNames.toList()];
       }
     } catch (e) {
       debugPrint('Lỗi fetch data: $e');
@@ -108,6 +123,17 @@ class _SelectMachineToBorrowScreenState
     // Biến kiểm tra xem đã chọn đủ số lượng chưa
     bool isEnough = _selectedMachineIds.length == _requiredQuantity;
 
+    // 🚀 THÊM: Lọc danh sách máy tính theo phòng đã chọn trên thanh Filter
+    final filteredMachines = _availableMachines.where((m) {
+      if (_selectedRoomFilter == 'Tất cả') return true;
+      final room = _rooms.firstWhere(
+        (r) => r['id'].toString() == m['ma_phong'].toString(),
+        orElse: () => {},
+      );
+      final rName = room['ten_phong'] ?? 'Khác';
+      return rName == _selectedRoomFilter;
+    }).toList();
+
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F9),
       appBar: AppBar(
@@ -119,6 +145,7 @@ class _SelectMachineToBorrowScreenState
       body: _isLoading
           ? const Center(child: CircularProgressIndicator(color: kAppBlue))
           : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Thanh Header báo cáo tiến độ chọn máy
                 Container(
@@ -146,17 +173,62 @@ class _SelectMachineToBorrowScreenState
                     ],
                   ),
                 ),
+                const SizedBox(height: 12),
+
+                // 🚀 THÊM: Thanh trượt ngang (ChoiceChip) chọn bộ lọc phòng máy
+                SizedBox(
+                  height: 40,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    itemCount: _availableRoomsList.length,
+                    itemBuilder: (context, index) {
+                      final roomName = _availableRoomsList[index];
+                      final isSelected = _selectedRoomFilter == roomName;
+
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ChoiceChip(
+                          label: Text(
+                            roomName,
+                            style: TextStyle(
+                              color: isSelected ? Colors.white : Colors.black87,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                          selected: isSelected,
+                          selectedColor: kAppBlue,
+                          backgroundColor: Colors.white,
+                          showCheckmark: false,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                            side: BorderSide(
+                              color: isSelected ? kAppBlue : Colors.grey.shade300,
+                            ),
+                          ),
+                          onSelected: (bool selected) {
+                            if (selected) {
+                              setState(() {
+                                _selectedRoomFilter = roomName;
+                              });
+                            }
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(height: 8),
 
-                // Danh sách máy tính
+                // Danh sách máy tính (Đã áp dụng biến lọc filteredMachines)
                 Expanded(
-                  child: _availableMachines.isEmpty
-                      ? const Center(child: Text('Không có máy tính nào đang rảnh.'))
+                  child: filteredMachines.isEmpty
+                      ? const Center(child: Text('Không có máy tính nào phù hợp.'))
                       : ListView.builder(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          itemCount: _availableMachines.length,
+                          itemCount: filteredMachines.length,
                           itemBuilder: (context, index) {
-                            final m = _availableMachines[index];
+                            final m = filteredMachines[index];
                             final machineId = (m['id'] as num).toInt();
                             
                             // Tìm tên phòng
