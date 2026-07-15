@@ -39,7 +39,8 @@ dependencies:
   table_calendar: ^3.0.8
   supabase_flutter: ^2.15.0
   crypto: ^3.0.2
-  file_picker: ^3.0.4
+  file_picker: ^11.0.2
+  flutter_launcher_icons: ^0.14.2
 
 dev_dependencies:
   flutter_test:
@@ -59,3 +60,8 @@ flutter:
   assets:
     - assets/img/logo.png
     - .env
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/img/logo/images.png"
+  min_sdk_android: 21

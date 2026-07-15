@@ -56,7 +56,7 @@ class AcademicViewModel extends ChangeNotifier {
       } else {
         await repository.addClass(data);
       }
-      await fetchInitialData(); // Load lại data sau khi thay đổi
+      await fetchInitialData(); 
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -77,6 +77,7 @@ class AcademicViewModel extends ChangeNotifier {
       return false;
     }
   }
+  
   Future<void> fetchStudentsForClass(int classId) async {
     isStudentLoading = true;
     notifyListeners();
@@ -93,6 +94,7 @@ class AcademicViewModel extends ChangeNotifier {
       classStudents = listData.map((json) => StudentModel.fromJson(json)).toList();
       availableStudents = availData.map((json) => StudentModel.fromJson(json)).toList();
     } catch (e) {
+      print('🔥 LỖI TẠI MÀN HÌNH LỚP HỌC: $e'); // Thêm dòng này vào để terminal chửi lên nếu có lỗi
       errorMessage = e.toString();
     } finally {
       isStudentLoading = false;
@@ -103,8 +105,8 @@ class AcademicViewModel extends ChangeNotifier {
   Future<bool> addStudentToClass(int classId, int studentId) async {
     try {
       await ApiService.post('/lop-hoc/$classId/sinh-vien', {'studentId': studentId});
-      await fetchStudentsForClass(classId); // Tải lại list SV
-      await fetchInitialData(); // Tải lại list Lớp để cập nhật Số lượng SV
+      await fetchStudentsForClass(classId); 
+      await fetchInitialData(); 
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -125,18 +127,17 @@ class AcademicViewModel extends ChangeNotifier {
       return false;
     }
   }
+  
   Future<void> fetchCourseSections() async {
     isSectionLoading = true;
     notifyListeners();
     try {
-      // 1. Lấy danh sách Lớp học phần
       final resLhp = await ApiService.get('/lop-hoc-phan');
       final decodedLhp = ApiService.decodeBody(resLhp);
       if (decodedLhp != null && decodedLhp['data'] != null) {
         courseSections = (decodedLhp['data'] as List).map((json) => CourseSectionModel.fromJson(json)).toList();
       }
 
-      // 2. Lấy dữ liệu cho Dropdown (Môn, Năm học, Phòng)
       final resMon = await ApiService.get('/mon-hoc');
       final resNam = await ApiService.get('/nam-hoc');
       final resPhong = await ApiService.get('/phong-may');
@@ -159,7 +160,7 @@ class AcademicViewModel extends ChangeNotifier {
       } else {
         await ApiService.put('/lop-hoc-phan/$id', data.toJson());
       }
-      await fetchCourseSections(); // Tải lại dữ liệu sau khi lưu
+      await fetchCourseSections(); 
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -179,10 +180,10 @@ class AcademicViewModel extends ChangeNotifier {
       return false;
     }
   }
+
   // =========================================================
   // --- BIẾN & HÀM CHO SINH VIÊN TRONG LỚP HỌC PHẦN ---
   // =========================================================
-
 
   Future<void> fetchStudentsForModule(int moduleId) async {
     isStudentLoading = true;
@@ -190,9 +191,9 @@ class AcademicViewModel extends ChangeNotifier {
     try {
       // Lấy danh sách SV đang học trong Lớp học phần này
       final resList = await ApiService.get('/lop-hoc-phan/$moduleId/sinh-vien');
-      // Lấy danh sách SV để đưa vào Dropdown lúc chọn Thêm mới 
-      // (Tạm mượn API sinh-vien-tu-do, nếu có API /sinh-vien thì bạn thay vào nhé)
-      final resAll = await ApiService.get('/sinh-vien-tu-do');
+      
+      // 🚀 ĐÃ FIX: Chỉnh URL khớp chuẩn RESTful bên Backend
+      final resAll = await ApiService.get('/lop-hoc-phan/$moduleId/sinh-vien-tu-do');
 
       final listDecoded = ApiService.decodeBody(resList);
       final allDecoded = ApiService.decodeBody(resAll);
@@ -203,6 +204,7 @@ class AcademicViewModel extends ChangeNotifier {
       moduleStudents = listData.map((json) => StudentModel.fromJson(json)).toList();
       allStudents = allData.map((json) => StudentModel.fromJson(json)).toList();
     } catch (e) {
+      print('🔥 ERROR FETCHING STUDENTS: $e'); // Print log để debug nếu văng lỗi
       errorMessage = e.toString();
     } finally {
       isStudentLoading = false;
@@ -213,8 +215,8 @@ class AcademicViewModel extends ChangeNotifier {
   Future<bool> addStudentToModule(int moduleId, int studentId) async {
     try {
       await ApiService.post('/lop-hoc-phan/$moduleId/sinh-vien', {'studentId': studentId});
-      await fetchStudentsForModule(moduleId); // Tải lại DS SV
-      await fetchCourseSections(); // Tải lại DS Lớp học phần để cập nhật con số Sĩ số
+      await fetchStudentsForModule(moduleId); 
+      await fetchCourseSections(); 
       return true;
     } catch (e) {
       errorMessage = e.toString();
@@ -235,6 +237,7 @@ class AcademicViewModel extends ChangeNotifier {
       return false;
     }
   }
+
   // =========================================================
   // --- BIẾN & HÀM CHO QUẢN LÝ MÔN HỌC ---
   // =========================================================
@@ -260,16 +263,13 @@ class AcademicViewModel extends ChangeNotifier {
 
   Future<bool> saveSubject(int? id, SubjectModel data) async {
     try {
-      print("=========================================");
-      print("🚀 DỮ LIỆU FLUTTER GỬI ĐI: ${data.toJson()}");
-      print("=========================================");
       if (id == null || id == 0) {
         await ApiService.post('/mon-hoc', data.toJson());
       } else {
         await ApiService.put('/mon-hoc/$id', data.toJson());
       }
-      await fetchSubjectsData(); // Tải lại danh sách môn
-      await fetchCourseSections(); // Tải lại form Lớp học phần
+      await fetchSubjectsData(); 
+      await fetchCourseSections(); 
       return true;
     } catch (e) {
       errorMessage = e.toString();

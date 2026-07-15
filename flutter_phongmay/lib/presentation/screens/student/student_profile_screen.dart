@@ -37,8 +37,6 @@ class _StudentProfileScreenState extends State<StudentProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = context.watch<LoginViewModel>().currentUser;
-    // LẮNG NGHE SỰ THAY ĐỔI DỮ LIỆU TỪ VIEWMODEL
-    final scheduleVM = context.watch<ScheduleViewModel>();
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F5F9),

@@ -39,11 +39,20 @@ class AuthService {
           userJson['vai_tro_id'] = userJson['ma_vai_tro'];
         }
 
+        final token = data['token']?.toString();
+        if (token != null && token.isNotEmpty) {
+          ApiService.token = token;
+        }
+
         // Debug: show normalized user payload
         // ignore: avoid_print
         print('AuthService.login -> Normalized user JSON: $userJson');
 
-        return {'success': true, 'user': UserModel.fromJson(userJson)};
+        return {
+          'success': true,
+          'user': UserModel.fromJson(userJson),
+          'token': token,
+        };
       }
       return {
         'success': false,

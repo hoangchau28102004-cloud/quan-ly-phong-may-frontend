@@ -27,12 +27,11 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
   DateTime _selectedDate = DateTime.now();
   List<Map<String, dynamic>> _phongBanList = [];
   int? _selectedPhongBanId;
-  bool _isLoadingDepartments = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchDepartments(); 
+    _fetchDepartments();
   }
 
   @override
@@ -52,7 +51,6 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
         if (body['success'] == true) {
           setState(() {
             _phongBanList = List<Map<String, dynamic>>.from(body['data']);
-            _isLoadingDepartments = false;
           });
         }
       }
@@ -65,7 +63,7 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedDate,
-      firstDate: DateTime.now(), 
+      firstDate: DateTime.now(),
       lastDate: DateTime(2030),
       builder: (context, child) {
         return Theme(
@@ -116,7 +114,7 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
   Widget build(BuildContext context) {
     return AdminLayout(
       title: 'Tạo phiếu mượn máy',
-      
+
       // ==============================================================
       // GẮN NÚT LỊCH SỬ VÀ ĐIỀU HƯỚNG SANG BORROW_MACHINE_HISTORY_SCREEN
       // ==============================================================
@@ -134,8 +132,8 @@ class _BorrowMachineScreenState extends State<BorrowMachineScreen> {
           },
         ),
       ],
-      // ==============================================================
 
+      // ==============================================================
       child: SingleChildScrollView(
         child: Container(
           padding: const EdgeInsets.all(20.0),

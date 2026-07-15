@@ -238,16 +238,6 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
     );
   }
 
-  // HÀM TỰ ĐỘNG DỊCH ID PHÒNG SANG TÊN PHÒNG CHO BẢNG LỊCH SỬ ĐẸP MẮT
-  String _getRoomName(dynamic roomId) {
-    if (roomId == null) return '-';
-    final room = rooms.firstWhere(
-      (r) => r['id'].toString() == roomId.toString(),
-      orElse: () => {},
-    );
-    return room['ten_phong']?.toString() ?? 'Phòng ID: $roomId';
-  }
-
   // GIAO DIỆN BẢNG LỊCH SỬ
   // GIAO DIỆN BẢNG LỊCH SỬ
   Widget _buildHistoryTable() {
@@ -263,7 +253,8 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 15),
-            history.isEmpty // Đã đổi thành history
+            history
+                    .isEmpty // Đã đổi thành history
                 ? const Padding(
                     padding: EdgeInsets.all(20.0),
                     child: Text(
@@ -292,19 +283,25 @@ class _TransferMachineScreenState extends State<TransferMachineScreen> {
                           cells: [
                             DataCell(
                               SizedBox(
-                                width: 120, 
+                                width: 120,
                                 child: Text(
                                   item['danh_sach_may']?.toString() ?? 'N/A',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
                                 ),
                               ),
                             ),
-                            DataCell(Text(item['tu_phong']?.toString() ?? 'N/A')),
-                            DataCell(Text(item['den_phong']?.toString() ?? 'N/A')),
+                            DataCell(
+                              Text(item['tu_phong']?.toString() ?? 'N/A'),
+                            ),
+                            DataCell(
+                              Text(item['den_phong']?.toString() ?? 'N/A'),
+                            ),
                             DataCell(Text(item['ly_do']?.toString() ?? '')),
                           ],
                         );
-                      }).toList(), 
+                      }).toList(),
                     ),
                   ),
           ],

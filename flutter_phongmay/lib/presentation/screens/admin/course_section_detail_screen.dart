@@ -25,15 +25,10 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
     // Gọi API lấy dữ liệu thật ngay khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final vm = context.read<AcademicViewModel>();
-      
-      // 1. Lấy SV đã có trong LHP này (Code cũ)
       vm.fetchStudentsForModule(widget.sectionItem.id);
       if (widget.sectionItem.maLop != null) {
         vm.fetchStudentsForClass(widget.sectionItem.maLop!);
       }
-      context.read<AcademicViewModel>().fetchStudentsForModule(
-        widget.sectionItem.id,
-      );
     });
   }
 
@@ -279,15 +274,19 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
     AcademicViewModel viewModel,
   ) {
     int? selectedStudentId;
-    final availableStudents = viewModel.classStudents.where((svLop) {
-      return !viewModel.moduleStudents.any((svLhp) => svLhp.id == svLop.id);
-    }).toList();
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setState) {
+          final isLoading = viewModel.isStudentLoading;
+          final availableStudents = viewModel.classStudents.where((svLop) {
+            return !viewModel.moduleStudents.any(
+              (svLhp) => svLhp.id == svLop.id,
+            );
+          }).toList();
+
           return Container(
             decoration: const BoxDecoration(
               color: Colors.white,
@@ -313,27 +312,43 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
-                DropdownButtonFormField<int>(
-                  initialValue: selectedStudentId,
-                  decoration: InputDecoration(
-                    labelText: 'Chọn sinh viên',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
+                if (isLoading)
+                  const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF0F3E99)),
+                  )
+                else ...[
+                  DropdownButtonFormField<int>(
+                    initialValue: selectedStudentId,
+                    decoration: InputDecoration(
+                      labelText: 'Chọn sinh viên',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                     ),
+                    items: availableStudents
+                        .map(
+                          (sv) => DropdownMenuItem<int>(
+                            value: sv.id,
+                            child: Text('${sv.maSinhVien} - ${sv.hoTen}'),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: availableStudents.isEmpty
+                        ? null
+                        : (val) => setState(() => selectedStudentId = val),
+                    hint: availableStudents.isEmpty
+                        ? const Text('Không có sinh viên nào')
+                        : const Text('Chọn sinh viên cần thêm'),
                   ),
-                  items: availableStudents
-                      .map(
-                        (sv) => DropdownMenuItem(
-                          value: sv.id,
-                          child: Text('${sv.maSinhVien} - ${sv.hoTen}'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (val) => setState(() => selectedStudentId = val),
-                  hint: availableStudents.isEmpty
-                      ? const Text('Không có sinh viên nào')
-                      : const Text('Chọn sinh viên cần thêm'),
-                ),
+                  if (availableStudents.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 12),
+                      child: Text(
+                        'Lớp học phần này đã thêm hết sinh viên trong lớp cha hoặc chưa tải được dữ liệu.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                ],
                 const SizedBox(height: 24),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(
@@ -343,9 +358,8 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  onPressed: selectedStudentId == null
-                      ? null
-                      : () async {
+                  onPressed: (!isLoading && selectedStudentId != null)
+                      ? () async {
                           if (viewModel.moduleStudents.length >=
                               widget.sectionItem.siSoToiDa) {
                             if (!ctx.mounted) return;
@@ -372,7 +386,6 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                           Navigator.pop(ctx); // Đóng BottomSheet
 
                           if (success) {
-                            // GỌI MESSENGER ĐÃ LƯU
                             messenger.showSnackBar(
                               const SnackBar(
                                 content: Text('Đã thêm sinh viên!'),
@@ -389,7 +402,8 @@ class _CourseSectionDetailScreenState extends State<CourseSectionDetailScreen> {
                               ),
                             );
                           }
-                        },
+                        }
+                      : null,
                   child: const Text(
                     'THÊM VÀO LỚP HỌC PHẦN',
                     style: TextStyle(

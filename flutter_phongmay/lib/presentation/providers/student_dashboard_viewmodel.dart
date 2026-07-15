@@ -1,14 +1,8 @@
 import 'dart:convert';
-import 'package:http/http.dart' as http;
-import 'package:flutter/foundation.dart'; // Để dùng kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 
 class StudentDashboardViewModel extends ChangeNotifier {
-  // Tự động nhận diện nền tảng
-  final String _baseUrl = kIsWeb
-      ? 'http://127.0.0.1:8001/api'
-      : 'http://10.0.2.2:8001/api';
-
   // STATE TỔNG QUAN
   bool _loading = false;
   int _coursesCount = 0;
@@ -51,17 +45,13 @@ class StudentDashboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/student-dashboard/$userId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      final response = await ApiService.get('/student-dashboard/$userId');
+      final decoded = ApiService.decodeBody(response);
 
-      if (response.statusCode == 200) {
-        final Map<String, dynamic> body = jsonDecode(response.body);
-        final data = body['data'];
+      if (response.statusCode == 200 &&
+          decoded != null &&
+          decoded['data'] != null) {
+        final data = decoded['data'];
 
         // Cập nhật vào các biến private cũ của bác
         _coursesCount = data['coursesCount'] ?? 0;
@@ -77,7 +67,9 @@ class StudentDashboardViewModel extends ChangeNotifier {
 
         debugPrint('✅ Data OK: $_coursesCount');
       } else {
-        debugPrint('❌ Server trả về: ${response.statusCode}');
+        debugPrint(
+          '❌ Server trả về: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint("❌ Lỗi: $e");
@@ -93,17 +85,18 @@ class StudentDashboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/schedule/student?ma_nguoi_dung=$userId'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
+      final response = await ApiService.get(
+        '/schedule/student?ma_nguoi_dung=$userId',
       );
+      final decoded = ApiService.decodeBody(response);
 
-      if (response.statusCode == 200) {
-        _schedules = jsonDecode(response.body)['data'] ?? [];
+      if (response.statusCode == 200 && decoded != null) {
+        _schedules = decoded['data'] ?? [];
         _filterSchedulesByDay();
+      } else {
+        debugPrint(
+          '❌ Server trả về lịch học: ${response.statusCode} - ${response.body}',
+        );
       }
     } catch (e) {
       debugPrint("Lỗi tải lịch học: $e");
@@ -145,20 +138,12 @@ class StudentDashboardViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/attendance/check-in-qr'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'scheduleId': scheduleId,
-          'qrCode': machineQrCode,
-          'userId': userId,
-        }),
-      );
+      final response = await ApiService.post('/attendance/check-in-qr', {
+        'scheduleId': scheduleId,
+        'qrCode': machineQrCode,
+        'userId': userId,
+      });
 
-      // Trả về nguyên bộ thông điệp của Backend (gồm success, message và data)
       return jsonDecode(response.body);
     } catch (e) {
       debugPrint("Lỗi call API điểm danh: $e");
@@ -173,43 +158,35 @@ class StudentDashboardViewModel extends ChangeNotifier {
   }
 
   // 3. GỬI BÁO CÁO SỰ CỐ
- Future<bool> submitIncidentReport(
-      int userId, // Bắt buộc phải truyền ID của sinh viên (VD: Châu có ID là 37)
-      int machineId, 
-      String issueType, 
-      String title, 
-      String description, 
-      String token) async {
+  Future<bool> submitIncidentReport(
+    int userId, // Bắt buộc phải truyền ID của sinh viên (VD: Châu có ID là 37)
+    int machineId,
+    String issueType,
+    String title,
+    String description,
+    String token,
+  ) async {
     try {
-      // 1. Kiểm tra lại URL xem đã đúng /api/issues/report chưa (tùy file route của bác)
-      final response = await http.post(
-        Uri.parse('$_baseUrl/issues/report'), 
-        headers: {
-          'Content-Type': 'application/json', 
-          'Authorization': 'Bearer $token'
-        },
-        body: jsonEncode({
-          // 2. 🚀 MAP CHUẨN 100% VỚI REQ.BODY CỦA BACKEND
-          'ma_nguoi_bao_cao': userId,
-          'ma_may_tinh': machineId,
-          'loai_su_co': issueType,
-          'tieu_de': title,
-          'mo_ta': description,
-          'muc_do': 'normal', // Mặc định cho sinh viên
-        }),
-      );
-      
+      final response = await ApiService.post('/issues/report', {
+        'ma_nguoi_bao_cao': userId,
+        'ma_may_tinh': machineId,
+        'loai_su_co': issueType,
+        'tieu_de': title,
+        'mo_ta': description,
+        'muc_do': 'normal',
+      });
+
       final data = jsonDecode(response.body);
-      
+
       if (response.statusCode == 200 && data['success'] == true) {
-        return true; // Thành công mỹ mãn
+        return true;
       } else {
-        // 🚀 VŨ KHÍ TỐI THƯỢNG: Bắt Backend phải khai ra nó đang khó chịu cái gì
-        debugPrint('❌ Backend từ chối: ${response.statusCode} - ${response.body}');
+        debugPrint(
+          '❌ Backend từ chối: ${response.statusCode} - ${response.body}',
+        );
         return false;
       }
     } catch (e) {
-      // Bắt các lỗi crash mạng hoặc JSON sai định dạng
       debugPrint("🔥 Lỗi sập hàm call API: $e");
       return false;
     }

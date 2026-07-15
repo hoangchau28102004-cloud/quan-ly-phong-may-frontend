@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_phongmay/core/constants/status_translations.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
@@ -23,7 +24,8 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
 
   List<dynamic> _transfers = [];
   List<dynamic> _borrows = [];
-  List<dynamic> _returns = []; // Bác tách riêng Mượn/Trả ở backend nên phải có biến này
+  List<dynamic> _returns =
+      []; // Bác tách riêng Mượn/Trả ở backend nên phải có biến này
   List<dynamic> _maintenances = [];
 
   @override
@@ -36,7 +38,7 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
     setState(() => _isLoading = true);
     try {
       final machineId = widget.machine['id'];
-      
+
       // SỬA ĐƯỜNG DẪN: Bỏ chữ /assets đi, vì app.js đã map trực tiếp từ /api
       final res = await ApiService.get('/may-tinh/$machineId/history');
 
@@ -97,15 +99,17 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
             _buildMachineHeader(),
             const Divider(height: 1, color: Colors.black12),
             Expanded(
-              child: _isLoading 
-                ? const Center(child: CircularProgressIndicator(color: kAppBlue))
-                : TabBarView(
-                    children: [
-                      _buildTransferHistoryTab(),
-                      _buildBorrowHistoryTab(),
-                      _buildMaintenanceHistoryTab(),
-                    ],
-                  ),
+              child: _isLoading
+                  ? const Center(
+                      child: CircularProgressIndicator(color: kAppBlue),
+                    )
+                  : TabBarView(
+                      children: [
+                        _buildTransferHistoryTab(),
+                        _buildBorrowHistoryTab(),
+                        _buildMaintenanceHistoryTab(),
+                      ],
+                    ),
             ),
           ],
         ),
@@ -115,7 +119,8 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
 
   Widget _buildMachineHeader() {
     final c = widget.machine;
-    bool isActive = (c['trang_thai'] ?? 'active').toString().toLowerCase() == 'active';
+    bool isActive =
+        (c['trang_thai'] ?? 'active').toString().toLowerCase() == 'active';
 
     return Container(
       color: Colors.white,
@@ -132,20 +137,32 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
                   const SizedBox(width: 8),
                   Text(
                     c['ma_may']?.toString() ?? 'N/A',
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: isActive ? Colors.green.shade100 : Colors.red.shade100,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  c['trang_thai']?.toString().toUpperCase() ?? 'ACTIVE',
+                  translateAppStatus(
+                    c['trang_thai'],
+                    defaultLabel: isActive ? 'Đang hoạt động' : 'Bảo trì',
+                  ),
                   style: TextStyle(
-                    color: isActive ? Colors.green.shade800 : Colors.red.shade800,
+                    color: isActive
+                        ? Colors.green.shade800
+                        : Colors.red.shade800,
                     fontWeight: FontWeight.bold,
                     fontSize: 12,
                   ),
@@ -158,7 +175,14 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
             children: [
               const Icon(Icons.room, size: 18, color: Colors.redAccent),
               const SizedBox(width: 4),
-              Text(widget.roomName, style: const TextStyle(fontSize: 15, color: Colors.black87, fontWeight: FontWeight.w500)),
+              Text(
+                widget.roomName,
+                style: const TextStyle(
+                  fontSize: 15,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 16),
@@ -183,10 +207,13 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
                 const SizedBox(height: 8),
                 _buildConfigRow('Màn hình', c['man_hinh']),
                 const SizedBox(height: 8),
-                _buildConfigRow('Phụ kiện', '${c['ban_phim'] ?? '-'} / ${c['chuot'] ?? '-'}'),
+                _buildConfigRow(
+                  'Phụ kiện',
+                  '${c['ban_phim'] ?? '-'} / ${c['chuot'] ?? '-'}',
+                ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
@@ -197,16 +224,23 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(label, style: const TextStyle(color: Colors.black54)),
-        Text(value?.toString() ?? 'N/A', style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.black87)),
+        Text(
+          value?.toString() ?? 'N/A',
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
       ],
     );
   }
 
- // ==========================================
+  // ==========================================
   // TAB 1: LỊCH SỬ ĐIỀU CHUYỂN
   // ==========================================
   Widget _buildTransferHistoryTab() {
-    if (_transfers.isEmpty) return _buildEmptyState('Chưa có lịch sử điều chuyển');
+    if (_transfers.isEmpty)
+      return _buildEmptyState('Chưa có lịch sử điều chuyển');
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -217,24 +251,24 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
           shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12), 
-              side: BorderSide(color: Colors.grey.shade200)
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade200),
           ),
           child: ListTile(
             leading: const CircleAvatar(
-                backgroundColor: Color(0xFFE8EEFF), 
-                child: Icon(Icons.swap_horiz, color: kAppBlue)
+              backgroundColor: Color(0xFFE8EEFF),
+              child: Icon(Icons.swap_horiz, color: kAppBlue),
             ),
             // UPDATE: Đã map đúng key 'tu_phong' và 'den_phong' từ Backend trả về
             title: Text(
-                'Từ: ${t['tu_phong'] ?? 'KHO'} ➡️ Đến: ${t['den_phong'] ?? 'N/A'}', 
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+              'Từ: ${t['tu_phong'] ?? 'KHO'} ➡️ Đến: ${t['den_phong'] ?? 'N/A'}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             subtitle: Text(
               'Ngày thao tác: ${_formatDate(t['thoi_gian_dieu_chuyen'])}\n'
               'Người thao tác: ${t['nguoi_thao_tac'] ?? 'Hệ thống'}\n'
               'Lý do: ${t['ly_do'] ?? 'Không có lý do cụ thể'}',
-              style: const TextStyle(height: 1.4)
+              style: const TextStyle(height: 1.4),
             ),
             isThreeLine: true,
           ),
@@ -255,34 +289,44 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
       itemCount: _borrows.length,
       itemBuilder: (context, index) {
         final b = _borrows[index];
-        
+
         // Tìm xem cái mã phiếu mượn này đã có trong danh sách TRẢ MÁY chưa
         final r = _returns.firstWhere(
-          (ret) => ret['ma_phieu_muon'] == b['id'], 
-          orElse: () => null
+          (ret) => ret['ma_phieu_muon'] == b['id'],
+          orElse: () => null,
         );
-        
+
         bool isReturned = r != null;
-        String returnDate = isReturned ? _formatDate(r['thoi_gian_tra']) : 'ĐANG MƯỢN';
+        String returnDate = isReturned
+            ? _formatDate(r['thoi_gian_tra'])
+            : 'ĐANG MƯỢN';
 
         return Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: isReturned ? Colors.green.shade50 : Colors.orange.shade50, 
-              child: Icon(isReturned ? Icons.check_circle : Icons.hourglass_top, color: isReturned ? Colors.green : Colors.orange)
+              backgroundColor: isReturned
+                  ? Colors.green.shade50
+                  : Colors.orange.shade50,
+              child: Icon(
+                isReturned ? Icons.check_circle : Icons.hourglass_top,
+                color: isReturned ? Colors.green : Colors.orange,
+              ),
             ),
             title: Text(
-              'Mã phiếu mượn: ${b['ma_phieu_muon'] ?? 'N/A'}', 
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)
+              'Mã phiếu mượn: ${b['ma_phieu_muon'] ?? 'N/A'}',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
             subtitle: Text(
               'Khoa/Phòng: ${b['ten_phong_ban'] ?? 'N/A'}\n'
               'Ngày mượn: ${_formatDate(b['ngay_muon'])}\n'
-              'Trạng thái: ${isReturned ? 'Đã trả ($returnDate)' : 'ĐANG NỢ MÁY'}', 
-              style: const TextStyle(height: 1.4)
+              'Trạng thái: ${isReturned ? 'Đã trả ($returnDate)' : 'ĐANG NỢ MÁY'}',
+              style: const TextStyle(height: 1.4),
             ),
             isThreeLine: true,
           ),
@@ -296,7 +340,8 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
   // Lấy data từ bảng bao_cao_su_co thông qua getMachineMaintenanceHistory của bác
   // ==========================================
   Widget _buildMaintenanceHistoryTab() {
-    if (_maintenances.isEmpty) return _buildEmptyState('Máy chưa có sự cố sửa chữa');
+    if (_maintenances.isEmpty)
+      return _buildEmptyState('Máy chưa có sự cố sửa chữa');
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -306,16 +351,25 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
         return Card(
           elevation: 0,
           margin: const EdgeInsets.only(bottom: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
           child: ListTile(
-            leading: const CircleAvatar(backgroundColor: Color(0xFFFFEBEE), child: Icon(Icons.build, color: Colors.red)),
-            title: Text('${m['tieu_de'] ?? 'Báo cáo sự cố'} (${m['loai_su_co'] ?? 'N/A'})', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            leading: const CircleAvatar(
+              backgroundColor: Color(0xFFFFEBEE),
+              child: Icon(Icons.build, color: Colors.red),
+            ),
+            title: Text(
+              '${m['tieu_de'] ?? 'Báo cáo sự cố'} (${m['loai_su_co'] ?? 'N/A'})',
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+            ),
             subtitle: Text(
-              'Mức độ: ${m['muc_do']?.toString().toUpperCase() ?? 'NORMAL'}\n'
+              'Mức độ: ${translateAppStatus(m['muc_do']?.toString(), defaultLabel: 'Bình thường')}\n'
               'Ngày báo: ${_formatDate(m['created_at'])}\n'
-              'Trạng thái: ${m['trang_thai']}\n'
-              'Mô tả: ${m['mo_ta'] ?? 'Không có mô tả chi tiết'}', 
-              style: const TextStyle(height: 1.4)
+              'Trạng thái: ${translateAppStatus(m['trang_thai']?.toString(), defaultLabel: 'Không rõ')}\n'
+              'Mô tả: ${m['mo_ta'] ?? 'Không có mô tả chi tiết'}',
+              style: const TextStyle(height: 1.4),
             ),
             isThreeLine: true,
           ),
@@ -331,7 +385,10 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
         children: [
           Icon(Icons.inbox_outlined, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text(text, style: TextStyle(color: Colors.grey.shade600, fontSize: 15)),
+          Text(
+            text,
+            style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
+          ),
         ],
       ),
     );

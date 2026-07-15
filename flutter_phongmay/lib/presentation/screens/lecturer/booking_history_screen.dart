@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_phongmay/core/constants/status_translations.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
@@ -152,19 +153,18 @@ class _BookingHistoryScreenState extends State<BookingHistoryScreen> {
 
   Widget _buildHistoryCard(dynamic item) {
     String status = item['trang_thai_duyet'] ?? 'pending';
+    String lowerStatus = status.toString().toLowerCase();
     Color statusColor;
     String statusText;
 
-    if (status == 'approved') {
+    if (lowerStatus == 'approved' || lowerStatus == 'đã duyệt') {
       statusColor = Colors.green;
-      statusText = 'Đã duyệt';
-    } else if (status == 'rejected') {
+    } else if (lowerStatus == 'rejected' || lowerStatus == 'từ chối') {
       statusColor = Colors.red;
-      statusText = 'Từ chối';
     } else {
       statusColor = Colors.orange;
-      statusText = 'Chờ duyệt';
     }
+    statusText = translateAppStatus(status, defaultLabel: 'Chờ duyệt');
 
     // Format ngày hiển thị
     String ngayDat = item['ngay_dat'] != null

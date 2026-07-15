@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
-import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -25,12 +23,12 @@ class _BorrowMachineHistoryScreenState
     _fetchData();
   }
 
- Future<void> _fetchData() async {
+  Future<void> _fetchData() async {
     setState(() => _isLoading = true);
     try {
       // SỬA LẠI: Gọi đúng API của backend và lấy toàn bộ danh sách
       final res = await ApiService.get('/borrow-return/muon-may');
-      
+
       if (res.statusCode == 200) {
         final body = ApiService.decodeBody(res);
         if (body != null && body['success'] == true) {
@@ -44,6 +42,7 @@ class _BorrowMachineHistoryScreenState
     }
     if (mounted) setState(() => _isLoading = false);
   }
+
   // Bảng hỏi xác nhận Hủy
   void _confirmDelete(int id) {
     showDialog(

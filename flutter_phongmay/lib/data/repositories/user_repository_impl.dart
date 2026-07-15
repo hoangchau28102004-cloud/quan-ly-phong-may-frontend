@@ -19,12 +19,12 @@ class UserRepositoryImpl implements UserRepository {
       'gioi_tinh': user.gioiTinh,
       'ngay_sinh': user.ngaySinh,
       // Gửi thẳng mật khẩu lên, Backend Node.js sẽ lo phần mã hóa Bcrypt
-      'mat_khau': password, 
+      'mat_khau': password,
     };
-    
+
     final resp = await ApiService.post('/users', body);
     final decoded = ApiService.decodeBody(resp);
-    
+
     if ((resp.statusCode == 200 || resp.statusCode == 201) &&
         decoded != null &&
         decoded['success'] == true) {
@@ -51,7 +51,9 @@ class UserRepositoryImpl implements UserRepository {
         decoded['success'] == true) {
       final data = List<Map<String, dynamic>>.from(decoded['data'] ?? []);
       return data
-          .map((e) => UserModel.fromJson(Map<String, dynamic>.from(e)).toEntity())
+          .map(
+            (e) => UserModel.fromJson(Map<String, dynamic>.from(e)).toEntity(),
+          )
           .toList();
     }
     throw Exception(decoded?['message'] ?? 'Failed to fetch users');
@@ -60,11 +62,11 @@ class UserRepositoryImpl implements UserRepository {
   @override
   Future<void> resetPassword(int userId) async {
     // Gửi thẳng chuỗi '123'
-    final temp = '123'; 
+    final temp = '123';
     final resp = await ApiService.put('/users/$userId/reset-password', {
       'mat_khau': temp, // Backend sẽ nhận '123' và mã hóa bằng Bcrypt
     });
-    
+
     final decoded = ApiService.decodeBody(resp);
     if (resp.statusCode != 200 ||
         decoded == null ||

@@ -8,7 +8,7 @@ import '../../../data/models/course_section_model.dart';
 import '../../../data/models/subject_model.dart';
 import '../../../data/datasources/api_service.dart';
 import '../../../data/repositories/academic_repository_impl.dart';
-
+import 'package:flutter_phongmay/core/constants/status_translations.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
 import 'class_detail_screen.dart';
 import 'course_section_detail_screen.dart';
@@ -59,14 +59,14 @@ class AcademicManagementView extends StatelessWidget {
                     unselectedLabelColor: Colors.grey,
                     indicatorColor: Color(0xFF0F3E99),
                     indicatorWeight: 3,
-                    isScrollable: true, // Cho phép vuốt ngang trên màn nhỏ
+                    isScrollable: true, 
                     labelStyle: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
                     ),
                     tabs: [
                       Tab(text: 'Lớp học'),
-                      Tab(text: 'Năm học'), // TÍNH NĂNG MỚI NẰM GIỮA
+                      Tab(text: 'Năm học'), 
                       Tab(text: 'Lớp học phần'),
                       Tab(text: 'Môn học'),
                     ],
@@ -1413,7 +1413,7 @@ class _CourseSectionListBodyState extends State<CourseSectionListBody> {
                       ),
                     ),
                     child: Text(
-                      item.trangThai.toUpperCase(),
+                      translateAppStatus(item.trangThai),
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
@@ -2089,6 +2089,7 @@ class _SubjectListBodyState extends State<SubjectListBody> {
         padding: const EdgeInsets.all(12.0),
         child: Row(
           children: [
+            // 1. Icon bên trái
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -2097,7 +2098,9 @@ class _SubjectListBodyState extends State<SubjectListBody> {
               ),
               child: const Icon(Icons.menu_book, color: Color(0xFF0F3E99)),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 12), // Đã giảm từ 16 xuống 12 để tối ưu UI
+
+            // 2. Nội dung chính giữa (Tự co giãn)
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2109,9 +2112,16 @@ class _SubjectListBodyState extends State<SubjectListBody> {
                       fontSize: 15,
                       color: Colors.black87,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis, // Cắt chữ nếu quá dài
                   ),
                   const SizedBox(height: 6),
-                  Row(
+                  
+                  // 🚀 Dùng Wrap thay Row để tự động rớt dòng nếu màn hình quá nhỏ
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -2132,7 +2142,6 @@ class _SubjectListBodyState extends State<SubjectListBody> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 8),
                       Text(
                         '${item.soTinChi} Tín chỉ',
                         style: TextStyle(
@@ -2145,15 +2154,23 @@ class _SubjectListBodyState extends State<SubjectListBody> {
                 ],
               ),
             ),
+            const SizedBox(width: 8),
+
+            // 3. Các nút thao tác bên phải (Ép sát gọn lại)
             Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
+                  padding: EdgeInsets.zero, // 🚀 Cắt bỏ padding mặc định thừa
+                  constraints: const BoxConstraints(), // 🚀 Thu gọn vùng bấm vừa vặn icon
                   icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
                   onPressed: () =>
                       _showSubjectBottomSheet(context, viewModel, item),
                 ),
+                const SizedBox(width: 12), // Khoảng cách giữa 2 nút
                 IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
                   icon: const Icon(
                     Icons.delete,
                     color: Colors.redAccent,
@@ -2169,7 +2186,6 @@ class _SubjectListBodyState extends State<SubjectListBody> {
       ),
     );
   }
-
   void _showSubjectBottomSheet(
     BuildContext context,
     AcademicViewModel viewModel,

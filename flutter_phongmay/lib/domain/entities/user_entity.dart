@@ -6,9 +6,8 @@ class UserEntity {
   final String? soDienThoai;
   final int vaiTroId;
   final int? lopHocId;
-  
   // --- BẮT BUỘC PHẢI CÓ 3 BIẾN NÀY ---
-  final int trangThai; 
+  final int trangThai;
   final String? gioiTinh;
   final String? ngaySinh;
 

@@ -28,6 +28,7 @@ import 'package:flutter_phongmay/presentation/screens/admin/transfer_machine_scr
 import 'package:flutter_phongmay/presentation/screens/admin/borrow_return_management_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/borrow_machine_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/return_machine_screen.dart';
+
 void main() async {
   // 1. Thêm 'async'
   // 2. Cần thiết để khởi tạo bindings trước khi chạy code async
@@ -58,7 +59,6 @@ void main() async {
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
         ChangeNotifierProvider(create: (_) => IssueViewModel()),
-        ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
       ],
       child: const MyApp(),
     ),
@@ -71,7 +71,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Quản Lý Phòng Máy Cao Thắng',
+      title: 'CKC-ITLAB',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primaryColor: const Color(0xFF193D87),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_phongmay/core/constants/status_translations.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
 // Đảm bảo đường dẫn này khớp với vị trí file bạn vừa tạo
@@ -1182,9 +1183,10 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                 final storage = c['ssd'] ?? c['hdd'] ?? 'N/A';
                 final roomName =
                     c['ten_phong'] ?? room['ten_phong'] ?? 'Chưa xếp';
+                final rawStatus =
+                    c['trang_thai']?.toString().toLowerCase() ?? 'active';
                 bool isActive =
-                    (c['trang_thai'] ?? 'active').toString().toLowerCase() ==
-                    'active';
+                    rawStatus == 'active' || rawStatus == 'đang hoạt động';
 
                 return Card(
                   elevation: 3,
@@ -1302,8 +1304,10 @@ class _AssetLabManagementScreenState extends State<AssetLabManagementScreen> {
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(
-                                  c['trang_thai']?.toString().toUpperCase() ??
-                                      'ACTIVE',
+                                  translateAppStatus(
+                                    c['trang_thai']?.toString(),
+                                    defaultLabel: 'Không rõ',
+                                  ),
                                   style: TextStyle(
                                     color: isActive
                                         ? Colors.green.shade800

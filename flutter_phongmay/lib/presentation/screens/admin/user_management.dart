@@ -178,7 +178,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                       labelText: 'Số điện thoại',
                     ),
                   ),
-
+                 
                   Consumer<UserViewModel>(
                     builder: (context, vm, _) {
                       return vm.roles.isNotEmpty
@@ -195,9 +195,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                                     ),
                                   )
                                   .toList(),
-                              onChanged: (v) => setStateDialog(
-                                () => _selectedRole = v ?? _selectedRole,
-                              ),
+                              onChanged: (v) => setStateDialog(() {
+                                _selectedRole = v ?? _selectedRole;
+                              }),
                             )
                           : const SizedBox();
                     },
