@@ -110,7 +110,7 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
     _emailController.clear();
     _phoneController.clear();
     final vm = Provider.of<UserViewModel>(context, listen: false);
-    _selectedRole = vm.roles.isNotEmpty ? vm.roles.first['id'] as int : 2;
+    _selectedRole = 2;
 
     String? selectedGender;
     DateTime? selectedDob;
@@ -212,6 +212,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
+                  print('====================================');
+                  print('🔥 FLUTTER ĐANG GỬI ROLE ID: $_selectedRole');
+                  print('====================================');
                   final name = _nameController.text.trim();
                   final email = _emailController.text.trim();
                   final phone = _phoneController.text.trim();

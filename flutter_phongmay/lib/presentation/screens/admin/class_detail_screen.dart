@@ -20,7 +20,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Tải danh sách sinh viên ngay khi mở màn hình
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<AcademicViewModel>().fetchStudentsForClass(
         widget.classItem.id,
@@ -38,7 +37,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
   Widget build(BuildContext context) {
     final viewModel = context.watch<AcademicViewModel>();
 
-    // LỌC SINH VIÊN THEO TÊN HOẶC MSSV
     final displayedStudents = viewModel.classStudents.where((sv) {
       final query = _searchQuery.toLowerCase();
       return sv.hoTen.toLowerCase().contains(query) ||
@@ -58,7 +56,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
       ),
       body: Column(
         children: [
-          // 1. HEADER THÔNG TIN LỚP HỌC
           Container(
             padding: const EdgeInsets.all(16),
             decoration: const BoxDecoration(
@@ -88,12 +85,10 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             ),
           ),
 
-          // 2. THANH TÌM KIẾM & NÚT THÊM CSV
           Container(
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                // Thanh tìm kiếm
                 Expanded(
                   child: TextField(
                     controller: _searchController,
@@ -120,7 +115,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                 ),
                 const SizedBox(width: 12),
 
-                // Nút Nhập CSV (Thiết kế hình vuông xanh lá chuẩn form Excel)
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.green.shade600,
@@ -143,7 +137,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             ),
           ),
 
-          // 3. DANH SÁCH SINH VIÊN ĐÃ LỌC
           Expanded(
             child: viewModel.isStudentLoading
                 ? const Center(
@@ -166,7 +159,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
         ],
       ),
 
-      // 4. NÚT THÊM SINH VIÊN THỦ CÔNG (FAB)
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () => _showAddStudentBottomSheet(context, viewModel),
         backgroundColor: const Color(0xFF0F3E99),
@@ -179,7 +171,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  // --- WIDGET UI HỖ TRỢ ---
   Widget _buildInfoBox(String title, String value) {
     return Container(
       padding: const EdgeInsets.all(10),
@@ -272,13 +263,17 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  // --- BOTTOM SHEET THÊM SINH VIÊN THỦ CÔNG ---
   void _showAddStudentBottomSheet(
     BuildContext context,
     AcademicViewModel viewModel,
-  ) {
+  ) async {
+    // Gọi API và chờ lấy danh sách xong xuôi mới bật BottomSheet
+    await viewModel.fetchStudentsForClass(widget.classItem.id);
+
+    // Dòng này bắt buộc phải có để tránh lỗi sập màn hình khi người dùng bấm back quá nhanh
+    if (!context.mounted) return;
+
     int? selectedStudentId;
-    viewModel.fetchStudentsForClass(widget.classItem.id);
 
     showModalBottomSheet(
       context: context,
@@ -291,6 +286,12 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
             final currentViewModel = context.watch<AcademicViewModel>();
             final isLoading = currentViewModel.isStudentLoading;
             final availableStudents = currentViewModel.availableStudents;
+
+            // 🚀 ĐÃ FIX: Chống lỗi màn hình đỏ khi sinh viên vừa bị phân vào lớp xong
+            if (selectedStudentId != null &&
+                !availableStudents.any((sv) => sv.id == selectedStudentId)) {
+              selectedStudentId = null;
+            }
 
             return Container(
               decoration: const BoxDecoration(
@@ -326,7 +327,9 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                   else ...[
                     DropdownButtonFormField<int>(
                       isExpanded: true,
-                      initialValue: selectedStudentId,
+                      // 🚀 ĐÃ FIX: Sử dụng 'value' thay vì 'initialValue' và thêm 'menuMaxHeight'
+                      value: selectedStudentId,
+                      menuMaxHeight: 400,
                       decoration: InputDecoration(
                         labelText: 'Chọn sinh viên',
                         border: OutlineInputBorder(
@@ -417,7 +420,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  // --- DIALOG THÊM SINH VIÊN TỪ FILE CSV ---
   void _showImportCsvDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -464,7 +466,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
               ),
             ),
             onPressed: () {
-              // TODO: Tích hợp package `file_picker` và gọi API upload ở đây
               Navigator.pop(ctx);
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
@@ -483,7 +484,6 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
     );
   }
 
-  // --- DIALOG XÁC NHẬN XÓA SINH VIÊN ---
   void _showRemoveConfirm(
     BuildContext context,
     AcademicViewModel viewModel,
