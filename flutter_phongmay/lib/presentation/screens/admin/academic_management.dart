@@ -1,0 +1,2442 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
+
+import '../../providers/academic_viewmodel.dart';
+import '../../../data/models/class_model.dart';
+import '../../../data/models/course_section_model.dart';
+import '../../../data/models/subject_model.dart';
+import '../../../data/datasources/api_service.dart';
+import '../../../data/repositories/academic_repository_impl.dart';
+import 'package:flutter_phongmay/core/constants/status_translations.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/admin_layout.dart';
+import 'class_detail_screen.dart';
+import 'course_section_detail_screen.dart';
+
+class AcademicManagementScreen extends StatelessWidget {
+  const AcademicManagementScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider(
+      create: (_) => AcademicViewModel(
+        repository: AcademicRepositoryImpl(apiService: ApiService()),
+      ),
+      child: const AcademicManagementView(),
+    );
+  }
+}
+
+class AcademicManagementView extends StatelessWidget {
+  const AcademicManagementView({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return AdminLayout(
+      title: 'Quản lý Học vụ',
+      child: Container(
+        color: const Color(0xFFF4F6F9),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: const [
+                BoxShadow(
+                  color: Colors.black12,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: DefaultTabController(
+              length: 4, // ĐỔI THÀNH 4 TABS
+              child: Column(
+                children: [
+                  const TabBar(
+                    labelColor: Color(0xFF0F3E99),
+                    unselectedLabelColor: Colors.grey,
+                    indicatorColor: Color(0xFF0F3E99),
+                    indicatorWeight: 3,
+                    isScrollable: true, 
+                    labelStyle: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                    tabs: [
+                      Tab(text: 'Lớp học'),
+                      Tab(text: 'Năm học'), 
+                      Tab(text: 'Lớp học phần'),
+                      Tab(text: 'Môn học'),
+                    ],
+                  ),
+                  const Divider(
+                    height: 1,
+                    thickness: 1,
+                    color: Color(0xFFEEEEEE),
+                  ),
+
+                  const Expanded(
+                    child: TabBarView(
+                      children: [
+                        ClassListBody(),
+                        AcademicYearListBody(), // HIỂN THỊ WIDGET MỚI
+                        CourseSectionListBody(),
+                        SubjectListBody(),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB MỚI: DANH SÁCH NĂM HỌC VÀ TUẦN TỰ ĐỘNG ---
+// =========================================================================
+class AcademicYearListBody extends StatefulWidget {
+  const AcademicYearListBody({super.key});
+
+  @override
+  State<AcademicYearListBody> createState() => _AcademicYearListBodyState();
+}
+
+class _AcademicYearListBodyState extends State<AcademicYearListBody> {
+  final Color primaryNavy = const Color(0xFF0F3E99);
+  bool _isLoading = true;
+  List<dynamic> _years = [];
+  String _statusFilter = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    try {
+      final res = await ApiService.get('/nam-hoc');
+      setState(() {
+        _years = ApiService.decodeBody(res)?['data'] ?? [];
+      });
+    } catch (e) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Lỗi tải năm học: $e')));
+    }
+    setState(() => _isLoading = false);
+  }
+
+  String _formatDate(dynamic dateStr) {
+    if (dateStr == null) return 'N/A';
+    try {
+      final dt = DateTime.parse(dateStr.toString()).toLocal();
+      return DateFormat('dd/MM/yyyy').format(dt);
+    } catch (_) {
+      return dateStr.toString();
+    }
+  }
+
+  void _showFormBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+        child: AddYearForm(onSuccess: _loadData),
+      ),
+    );
+  }
+
+  void _showWeeksBottomSheet(int maNamHoc, String tenNamHoc) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => WeekListSheet(maNamHoc: maNamHoc, tenNamHoc: tenNamHoc),
+    );
+  }
+
+  Future<void> _deleteYear(int id, String tenNamHoc) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận xóa', style: TextStyle(color: Colors.red)),
+        content: Text(
+          'Xóa năm học $tenNamHoc sẽ xóa luôn toàn bộ tuần học bên trong. Bạn có chắc chắn?',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await ApiService.delete('/nam-hoc/$id');
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Đã xóa thành công!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        _loadData();
+      } catch (e) {
+        if (mounted)
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
+          );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final filtered = _years
+        .where(
+          (y) => _statusFilter == 'all' || y['trang_thai'] == _statusFilter,
+        )
+        .toList();
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.white,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      isExpanded: true,
+                      value: _statusFilter,
+                      items: const [
+                        DropdownMenuItem(
+                          value: 'all',
+                          child: Text('Tất cả năm học'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'active',
+                          child: Text('Đang diễn ra'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'pending',
+                          child: Text('Sắp diễn ra'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'inactive',
+                          child: Text('Đã kết thúc'),
+                        ),
+                      ],
+                      onChanged: (val) => setState(() => _statusFilter = val!),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryNavy,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 14,
+                    horizontal: 16,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                onPressed: _showFormBottomSheet,
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text(
+                  'Thêm mới',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : filtered.isEmpty
+              ? const Center(
+                  child: Text(
+                    'Không có dữ liệu năm học.',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  itemCount: filtered.length,
+                  itemBuilder: (ctx, i) {
+                    final year = filtered[i];
+                    Color badgeColor = year['trang_thai'] == 'active'
+                        ? Colors.green
+                        : (year['trang_thai'] == 'pending'
+                              ? Colors.orange
+                              : Colors.grey);
+                    String badgeText = year['trang_thai'] == 'active'
+                        ? 'Đang diễn ra'
+                        : (year['trang_thai'] == 'pending'
+                              ? 'Sắp diễn ra'
+                              : 'Đã kết thúc');
+
+                    return Card(
+                      elevation: 0.5,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        side: BorderSide(
+                          color: Colors.grey.shade200,
+                        ), // Đã fix tại đây
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFE8EAF6),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Icon(
+                                        Icons.date_range,
+                                        color: primaryNavy,
+                                        size: 18,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      year['ten_nam_hoc'],
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: badgeColor.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: badgeColor.withOpacity(0.3),
+                                    ), // Ở BoxDecoration thì dùng Border.all là đúng
+                                  ),
+                                  child: Text(
+                                    badgeText,
+                                    style: TextStyle(
+                                      color: badgeColor,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 11,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.play_arrow,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Bắt đầu: ${_formatDate(year['ngay_bat_dau'])}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            Row(
+                              children: [
+                                const Icon(
+                                  Icons.stop,
+                                  size: 14,
+                                  color: Colors.grey,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Kết thúc: ${_formatDate(year['ngay_ket_thuc'])}',
+                                  style: TextStyle(
+                                    color: Colors.grey.shade700,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const Divider(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () => _showWeeksBottomSheet(
+                                    year['id'],
+                                    year['ten_nam_hoc'],
+                                  ),
+                                  icon: const Icon(
+                                    Icons.view_week,
+                                    size: 16,
+                                    color: Colors.blue,
+                                  ),
+                                  label: const Text(
+                                    'Xem Tuần',
+                                    style: TextStyle(color: Colors.blue),
+                                  ),
+                                ),
+                                TextButton.icon(
+                                  onPressed: () => _deleteYear(
+                                    year['id'],
+                                    year['ten_nam_hoc'],
+                                  ),
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    size: 16,
+                                    color: Colors.red,
+                                  ),
+                                  label: const Text(
+                                    'Xóa',
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+// FORM DƯỚI ĐÁY TẠO NĂM HỌC
+class AddYearForm extends StatefulWidget {
+  final VoidCallback onSuccess;
+  const AddYearForm({super.key, required this.onSuccess});
+
+  @override
+  State<AddYearForm> createState() => _AddYearFormState();
+}
+
+class _AddYearFormState extends State<AddYearForm> {
+  final _formKey = GlobalKey<FormState>();
+  final Color primaryNavy = const Color(0xFF0F3E99);
+
+  final _nameCtrl = TextEditingController();
+  DateTime? _startDate;
+  DateTime? _endDate;
+  String _status = 'pending';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Tạo Năm Học Mới',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: primaryNavy,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Lưu ý: Hệ thống sẽ tự động tính toán và sinh danh sách Tuần học (Từ T2 đến CN) dựa trên ngày bạn chọn.',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(
+                labelText: 'Tên năm học (VD: 2026-2027)',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              validator: (v) => v!.isEmpty ? 'Vui lòng nhập tên' : null,
+            ),
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (d != null) setState(() => _startDate = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _startDate == null
+                            ? 'Ngày bắt đầu'
+                            : DateFormat('dd/MM/yyyy').format(_startDate!),
+                        style: TextStyle(
+                          color: _startDate == null
+                              ? Colors.grey
+                              : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: InkWell(
+                    onTap: () async {
+                      final d = await showDatePicker(
+                        context: context,
+                        initialDate: _startDate ?? DateTime.now(),
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime(2035),
+                      );
+                      if (d != null) setState(() => _endDate = d);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey.shade400),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Text(
+                        _endDate == null
+                            ? 'Ngày kết thúc'
+                            : DateFormat('dd/MM/yyyy').format(_endDate!),
+                        style: TextStyle(
+                          color: _endDate == null ? Colors.grey : Colors.black,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            DropdownButtonFormField<String>(
+              initialValue: _status,
+              decoration: InputDecoration(
+                labelText: 'Trạng thái',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              items: const [
+                DropdownMenuItem(value: 'pending', child: Text('Sắp diễn ra')),
+                DropdownMenuItem(value: 'active', child: Text('Đang diễn ra')),
+              ],
+              onChanged: (v) => setState(() => _status = v!),
+            ),
+            const SizedBox(height: 24),
+
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: primaryNavy,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () async {
+                  if (_formKey.currentState!.validate()) {
+                    if (_startDate == null || _endDate == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Vui lòng chọn ngày bắt đầu và kết thúc!',
+                          ),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+                    if (_endDate!.isBefore(_startDate!)) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Ngày kết thúc phải sau ngày bắt đầu!'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                      return;
+                    }
+
+                    try {
+                      await ApiService.post('/nam-hoc', {
+                        'ten_nam_hoc': _nameCtrl.text,
+                        'ngay_bat_dau': DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(_startDate!),
+                        'ngay_ket_thuc': DateFormat(
+                          'yyyy-MM-dd',
+                        ).format(_endDate!),
+                        'trang_thai': _status,
+                      });
+                      widget.onSuccess();
+                      if (context.mounted) {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Tạo năm học thành công!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    } catch (e) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+                    }
+                  }
+                },
+                child: const Text(
+                  'LƯU & AUTO CHIA TUẦN',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =====================================
+// BOTTOM SHEET: XEM DANH SÁCH TUẦN ĐÃ CHIA
+// =====================================
+class WeekListSheet extends StatefulWidget {
+  final int maNamHoc;
+  final String tenNamHoc;
+  const WeekListSheet({
+    super.key,
+    required this.maNamHoc,
+    required this.tenNamHoc,
+  });
+
+  @override
+  State<WeekListSheet> createState() => _WeekListSheetState();
+}
+
+class _WeekListSheetState extends State<WeekListSheet> {
+  bool _isLoading = true;
+  List<dynamic> _weeks = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchWeeks();
+  }
+
+  Future<void> _fetchWeeks() async {
+    try {
+      final res = await ApiService.get('/tuan/${widget.maNamHoc}');
+      setState(() => _weeks = ApiService.decodeBody(res)?['data'] ?? []);
+    } catch (e) {
+      debugPrint('Lỗi tải tuần: $e');
+    }
+    setState(() => _isLoading = false);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      height: MediaQuery.of(context).size.height * 0.7,
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Tuần học - ${widget.tenNamHoc}',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F3E99),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          Text(
+            'Tổng cộng: ${_weeks.length} tuần',
+            style: const TextStyle(color: Colors.grey),
+          ),
+          const Divider(),
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _weeks.isEmpty
+                ? const Center(child: Text('Chưa có dữ liệu tuần học.'))
+                : ListView.separated(
+                    itemCount: _weeks.length,
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1),
+                    itemBuilder: (ctx, i) {
+                      final w = _weeks[i];
+                      final start = DateFormat(
+                        'dd/MM/yyyy',
+                      ).format(DateTime.parse(w['ngay_bat_dau']).toLocal());
+                      final end = DateFormat(
+                        'dd/MM/yyyy',
+                      ).format(DateTime.parse(w['ngay_ket_thuc']).toLocal());
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: CircleAvatar(
+                          backgroundColor: const Color(0xFFE8EAF6),
+                          child: Text(
+                            '${w['so_tuan']}',
+                            style: const TextStyle(
+                              color: Color(0xFF0F3E99),
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        title: Text(
+                          'Tuần ${w['so_tuan']}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Từ: $start   Đến: $end',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade700,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 1: DANH SÁCH LỚP HỌC (GIỮ NGUYÊN) ---
+// =========================================================================
+class ClassListBody extends StatefulWidget {
+  const ClassListBody({super.key});
+  @override
+  State<ClassListBody> createState() => _ClassListBodyState();
+}
+
+class _ClassListBodyState extends State<ClassListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AcademicViewModel>();
+    if (viewModel.isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F3E99)),
+      );
+    }
+
+    final displayedClasses = viewModel.classes.where((c) {
+      final query = _searchQuery.toLowerCase();
+      return c.maLop.toLowerCase().contains(query) ||
+          c.nienKhoa.toLowerCase().contains(query) ||
+          c.chuyenNganh.toLowerCase().contains(query) ||
+          (c.tenGiangVien?.toLowerCase().contains(query) ?? false);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm mã lớp, niên khóa, GVCN...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0F3E99)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    _showClassBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text(
+                  'Thêm lớp',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F3E99),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchInitialData(),
+            child: displayedClasses.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Không tìm thấy lớp học nào.',
+                      style: TextStyle(color: Colors.grey, fontSize: 16),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    itemCount: displayedClasses.length,
+                    itemBuilder: (context, index) {
+                      return _buildListItemCard(
+                        context,
+                        viewModel,
+                        displayedClasses[index],
+                      );
+                    },
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListItemCard(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    ClassModel classItem,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAFAFB),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ListTile(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (ctx) => ChangeNotifierProvider.value(
+              value: viewModel,
+              child: ClassDetailScreen(classItem: classItem),
+            ),
+          ),
+        ),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 12,
+        ),
+        leading: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE8EAF6),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.class_, color: Color(0xFF0F3E99), size: 24),
+        ),
+        title: Text(
+          classItem.maLop,
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            color: Colors.black87,
+          ),
+        ),
+        subtitle: Padding(
+          padding: const EdgeInsets.only(top: 4.0),
+          child: Text(
+            'Khóa: ${classItem.nienKhoa} • ${classItem.chuyenNganh}\nGVCN: ${classItem.tenGiangVien ?? "Chưa phân công"} • SV: ${classItem.soSinhVien}',
+            style: TextStyle(
+              color: Colors.grey[600],
+              fontSize: 13,
+              height: 1.4,
+            ),
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+              onPressed: () =>
+                  _showClassBottomSheet(context, viewModel, classItem),
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete, color: Colors.redAccent, size: 20),
+              onPressed: () =>
+                  _showDeleteConfirm(context, viewModel, classItem),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showClassBottomSheet(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    ClassModel? existingClass,
+  ) {
+    final isEdit = existingClass != null;
+    final maLopCtrl = TextEditingController(text: existingClass?.maLop ?? '');
+    final nienKhoaCtrl = TextEditingController(
+      text: existingClass?.nienKhoa ?? '',
+    );
+    final chuyenNganhCtrl = TextEditingController(
+      text: existingClass?.chuyenNganh ?? '',
+    );
+    int? selectedTeacherId = existingClass?.maGiangVien;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    isEdit ? 'Cập nhật Lớp học' : 'Thêm Lớp học mới',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F3E99),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: maLopCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Mã Lớp',
+                      hintText: 'VD: CDTH22A',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    readOnly: isEdit,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: nienKhoaCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Niên khóa',
+                      hintText: 'VD: 2022-2025',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: chuyenNganhCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Chuyên ngành',
+                      hintText: 'VD: CNTT',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  DropdownButtonFormField<int>(
+                    isExpanded: true,
+                    initialValue: selectedTeacherId,
+                    decoration: InputDecoration(
+                      labelText: 'Giảng viên chủ nhiệm',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    items: viewModel.teachers
+                        .map(
+                          (t) => DropdownMenuItem(
+                            value: t.id,
+                            child: Text(
+                              t.hoTen,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) => setState(() => selectedTeacherId = val),
+                  ),
+
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F3E99),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      final newData = ClassModel(
+                        id: existingClass?.id ?? 0,
+                        maLop: maLopCtrl.text,
+                        nienKhoa: nienKhoaCtrl.text,
+                        chuyenNganh: chuyenNganhCtrl.text,
+                        maGiangVien: selectedTeacherId,
+                        soSinhVien: existingClass?.soSinhVien ?? 0,
+                      );
+                      final messenger = ScaffoldMessenger.of(context);
+                      final success = await viewModel.saveClass(
+                        existingClass?.id,
+                        newData,
+                      );
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              isEdit
+                                  ? 'Cập nhật thành công!'
+                                  : 'Thêm lớp thành công!',
+                            ),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      }
+                    },
+                    child: Text(
+                      isEdit ? 'LƯU THAY ĐỔI' : 'TẠO LỚP MỚI',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    ClassModel classItem,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Xác nhận xóa',
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa lớp ${classItem.maLop} không?',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await viewModel.deleteClass(classItem.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              if (success) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Xóa lớp thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              'Xóa ngay',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 3: DANH SÁCH LỚP HỌC PHẦN (GIỮ NGUYÊN) ---
+// =========================================================================
+class CourseSectionListBody extends StatefulWidget {
+  const CourseSectionListBody({super.key});
+  @override
+  State<CourseSectionListBody> createState() => _CourseSectionListBodyState();
+}
+
+class _CourseSectionListBodyState extends State<CourseSectionListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AcademicViewModel>().fetchCourseSections();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AcademicViewModel>();
+    if (viewModel.isSectionLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F3E99)),
+      );
+    }
+
+    final displayedItems = viewModel.courseSections.where((c) {
+      final q = _searchQuery.toLowerCase();
+      return c.maLopHocPhan.toLowerCase().contains(q) ||
+          (c.tenMon?.toLowerCase().contains(q) ?? false);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm Lớp học phần, môn...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0F3E99)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    _showCourseSectionBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text(
+                  'Thêm mới',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F3E99),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchCourseSections(),
+            child: displayedItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Không tìm thấy lớp học phần nào.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: displayedItems.length,
+                    itemBuilder: (context, index) => _buildCourseSectionCard(
+                      context,
+                      viewModel,
+                      displayedItems[index],
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCourseSectionCard(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    CourseSectionModel item,
+  ) {
+    bool isActive =
+        item.trangThai.toLowerCase().contains('hoạt động') ||
+        item.trangThai.toLowerCase() == 'active';
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (ctx) => ChangeNotifierProvider.value(
+            value: viewModel,
+            child: CourseSectionDetailScreen(sectionItem: item),
+          ),
+        ),
+      ),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8EAF6),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Icon(
+                          Icons.library_books,
+                          color: Color(0xFF0F3E99),
+                          size: 18,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        item.maLopHocPhan,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Colors.green.shade50
+                          : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: isActive
+                            ? Colors.green.shade200
+                            : Colors.red.shade200,
+                      ),
+                    ),
+                    child: Text(
+                      translateAppStatus(item.trangThai),
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: isActive
+                            ? Colors.green.shade700
+                            : Colors.red.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              const SizedBox(height: 12),
+              Text(
+                'Môn: ${item.tenMon ?? "N/A"}',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                  color: Color(0xFF0F3E99),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.calendar_today,
+                    size: 14,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.tenNamHoc ?? "N/A",
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.class_, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.tenLop ?? 'N/A',
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                  const Spacer(),
+                  const Icon(Icons.room, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.tenPhong ?? "Chưa xếp",
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.people, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${item.soSinhVien} / ${item.siSoToiDa}',
+                    style: const TextStyle(fontSize: 12, color: Colors.black87),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  const Icon(Icons.person, size: 14, color: Colors.grey),
+                  const SizedBox(width: 4),
+                  Text(
+                    'GV: ${item.tenGiangVien ?? "Chưa phân công"}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontStyle: FontStyle.italic,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFEEEEEE)),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () =>
+                        _showCourseSectionBottomSheet(context, viewModel, item),
+                    icon: const Icon(
+                      Icons.edit,
+                      size: 16,
+                      color: Colors.orange,
+                    ),
+                    label: const Text(
+                      'Sửa',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () =>
+                        _showDeleteConfirm(context, viewModel, item),
+                    icon: const Icon(Icons.delete, size: 16, color: Colors.red),
+                    label: const Text(
+                      'Xóa',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showCourseSectionBottomSheet(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    CourseSectionModel? existingItem,
+  ) {
+    final isEdit = existingItem != null;
+    final maLopHocPhanCtrl = TextEditingController(
+      text: existingItem?.maLopHocPhan ?? '',
+    );
+    int? selectedLop =
+        (existingItem?.maLop != null &&
+            viewModel.classes.any((c) => c.id == existingItem!.maLop))
+        ? existingItem?.maLop
+        : null;
+    int? selectedMon =
+        (existingItem?.maMon != null &&
+            viewModel.subjects.any((m) => m['id'] == existingItem!.maMon))
+        ? existingItem?.maMon
+        : null;
+    int? selectedNam =
+        (existingItem?.maNamHoc != null &&
+            viewModel.academicYears.any(
+              (n) => n['id'] == existingItem!.maNamHoc,
+            ))
+        ? existingItem?.maNamHoc
+        : null;
+    int? selectedPhong =
+        (existingItem?.maPhong != null &&
+            viewModel.rooms.any((p) => p['id'] == existingItem!.maPhong))
+        ? existingItem?.maPhong
+        : null;
+    int? selectedTeacher = existingItem?.maGiangVien;
+    final siSoCtrl = TextEditingController(
+      text: existingItem?.siSoToiDa.toString() ?? '40',
+    );
+
+    String normalizeTrangThai(String? tt) {
+      if (tt == null) return 'Hoạt động';
+      final lower = tt.toLowerCase();
+      if (lower == 'active' ||
+          lower.contains('hoạt động') ||
+          lower.contains('hoat dong')) {
+        return 'Hoạt động';
+      }
+      return 'Đã khóa';
+    }
+
+    String selectedTrangThai = normalizeTrangThai(existingItem?.trangThai);
+    final ghiChuCtrl = TextEditingController(text: existingItem?.ghiChu ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            height: MediaQuery.of(context).size.height * 0.85,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 24,
+            ),
+            child: Column(
+              children: [
+                Text(
+                  isEdit ? 'Cập nhật Lớp học phần' : 'Thêm Lớp học phần mới',
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F3E99),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: maLopHocPhanCtrl,
+                                decoration: InputDecoration(
+                                  labelText: 'Mã LHP',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                readOnly: isEdit,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                isExpanded: true,
+                                initialValue: selectedLop,
+                                decoration: InputDecoration(
+                                  labelText: 'Lớp cha',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                items: viewModel.classes
+                                    .map(
+                                      (c) => DropdownMenuItem<int>(
+                                        value: c.id,
+                                        child: Text(
+                                          c.maLop,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => selectedLop = val),
+                                hint: const Text('Chọn lớp cha'),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          initialValue: selectedMon,
+                          decoration: InputDecoration(
+                            labelText: 'Môn học',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          items: viewModel.subjects
+                              .map<DropdownMenuItem<int>>(
+                                (m) => DropdownMenuItem<int>(
+                                  value: m['id'],
+                                  child: Text(
+                                    m['ten_mon']?.toString() ?? 'N/A',
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (val) => setState(() => selectedMon = val),
+                          hint: const Text('Chọn môn học'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                isExpanded: true,
+                                initialValue: selectedNam,
+                                decoration: InputDecoration(
+                                  labelText: 'Năm học',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                items: viewModel.academicYears
+                                    .map(
+                                      (n) => DropdownMenuItem<int>(
+                                        value: n['id'],
+                                        child: Text(
+                                          n['ten_nam_hoc']?.toString() ??
+                                              n['nam_hoc']?.toString() ??
+                                              'N/A',
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => selectedNam = val),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                isExpanded: true,
+                                initialValue: selectedTeacher,
+                                decoration: InputDecoration(
+                                  labelText: 'Giảng viên',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                items: viewModel.teachers
+                                    .map(
+                                      (t) => DropdownMenuItem<int>(
+                                        value: t.id,
+                                        child: Text(
+                                          t.hoTen,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => selectedTeacher = val),
+                                hint: const Text(
+                                  'Chưa phân công',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<int>(
+                                isExpanded: true,
+                                initialValue: selectedPhong,
+                                decoration: InputDecoration(
+                                  labelText: 'Phòng',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                                items: viewModel.rooms
+                                    .map(
+                                      (p) => DropdownMenuItem<int>(
+                                        value: p['id'],
+                                        child: Text(
+                                          p['ten_phong'],
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    )
+                                    .toList(),
+                                onChanged: (val) =>
+                                    setState(() => selectedPhong = val),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextField(
+                                controller: siSoCtrl,
+                                keyboardType: TextInputType.number,
+                                decoration: InputDecoration(
+                                  labelText: 'Sĩ số tối đa',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: selectedTrangThai,
+                          decoration: InputDecoration(
+                            labelText: 'Trạng thái',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Hoạt động',
+                              child: Text(
+                                'Hoạt động',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Đã khóa',
+                              child: Text(
+                                'Đã khóa',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) => setState(
+                            () => selectedTrangThai = val ?? 'Hoạt động',
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: ghiChuCtrl,
+                          maxLines: 3,
+                          decoration: InputDecoration(
+                            labelText: 'Ghi chú',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F3E99),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: () async {
+                    if (maLopHocPhanCtrl.text.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Vui lòng nhập Mã Lớp Học Phần'),
+                        ),
+                      );
+                      return;
+                    }
+                    if (selectedMon == null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Vui lòng chọn Môn học')),
+                      );
+                      return;
+                    }
+                    final newData = CourseSectionModel(
+                      id: existingItem?.id ?? 0,
+                      maLopHocPhan: maLopHocPhanCtrl.text,
+                      maLop: selectedLop,
+                      maMon: selectedMon,
+                      maNamHoc: selectedNam,
+                      maPhong: selectedPhong,
+                      maGiangVien: selectedTeacher,
+                      siSoToiDa: int.tryParse(siSoCtrl.text) ?? 40,
+                      soSinhVien: existingItem?.soSinhVien ?? 0,
+                      trangThai: selectedTrangThai,
+                      ghiChu: ghiChuCtrl.text,
+                    );
+                    final messenger = ScaffoldMessenger.of(context);
+                    final success = await viewModel.saveCourseSection(
+                      existingItem?.id,
+                      newData,
+                    );
+                    if (!ctx.mounted) return;
+                    Navigator.pop(ctx);
+                    if (success) {
+                      messenger.showSnackBar(
+                        const SnackBar(
+                          content: Text('Đã lưu lớp học phần!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'LƯU LỚP HỌC PHẦN',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteConfirm(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    CourseSectionModel item,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Xác nhận xóa',
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa Lớp học phần ${item.maLopHocPhan} không?',
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await viewModel.deleteCourseSection(item.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              if (success) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Xóa thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// =========================================================================
+// --- TAB 4: DANH SÁCH MÔN HỌC (GIỮ NGUYÊN) ---
+// =========================================================================
+class SubjectListBody extends StatefulWidget {
+  const SubjectListBody({super.key});
+  @override
+  State<SubjectListBody> createState() => _SubjectListBodyState();
+}
+
+class _SubjectListBodyState extends State<SubjectListBody> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AcademicViewModel>().fetchSubjectsData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final viewModel = context.watch<AcademicViewModel>();
+
+    if (viewModel.isSubjectLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: Color(0xFF0F3E99)),
+      );
+    }
+
+    final displayedItems = viewModel.listMonHoc.where((m) {
+      final q = _searchQuery.toLowerCase();
+      return m.tenMon.toLowerCase().contains(q) ||
+          m.maMonHoc.toLowerCase().contains(q);
+    }).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  onChanged: (val) => setState(() => _searchQuery = val),
+                  decoration: InputDecoration(
+                    hintText: 'Tìm mã môn, tên môn...',
+                    prefixIcon: const Icon(Icons.search, color: Colors.grey),
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 0,
+                      horizontal: 16,
+                    ),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: BorderSide(color: Colors.grey.shade300),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                      borderSide: const BorderSide(color: Color(0xFF0F3E99)),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              ElevatedButton.icon(
+                onPressed: () =>
+                    _showSubjectBottomSheet(context, viewModel, null),
+                icon: const Icon(Icons.add, color: Colors.white, size: 18),
+                label: const Text(
+                  'Thêm môn',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F3E99),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 16,
+                    horizontal: 16,
+                  ),
+                  elevation: 0,
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => viewModel.fetchSubjectsData(),
+            child: displayedItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      'Không tìm thấy môn học nào.',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: displayedItems.length,
+                    itemBuilder: (context, index) => _buildSubjectCard(
+                      context,
+                      viewModel,
+                      displayedItems[index],
+                    ),
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubjectCard(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    SubjectModel item,
+  ) {
+    return Card(
+      elevation: 0,
+      margin: const EdgeInsets.only(bottom: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Row(
+          children: [
+            // 1. Icon bên trái
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE8EAF6),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.menu_book, color: Color(0xFF0F3E99)),
+            ),
+            const SizedBox(width: 12), // Đã giảm từ 16 xuống 12 để tối ưu UI
+
+            // 2. Nội dung chính giữa (Tự co giãn)
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '[${item.maMonHoc}] ${item.tenMon}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                      color: Colors.black87,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis, // Cắt chữ nếu quá dài
+                  ),
+                  const SizedBox(height: 6),
+                  
+                  // 🚀 Dùng Wrap thay Row để tự động rớt dòng nếu màn hình quá nhỏ
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: Colors.orange.shade200),
+                        ),
+                        child: Text(
+                          item.loaiMon,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.orange.shade800,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${item.soTinChi} Tín chỉ',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+
+            // 3. Các nút thao tác bên phải (Ép sát gọn lại)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  padding: EdgeInsets.zero, // 🚀 Cắt bỏ padding mặc định thừa
+                  constraints: const BoxConstraints(), // 🚀 Thu gọn vùng bấm vừa vặn icon
+                  icon: const Icon(Icons.edit, color: Colors.orange, size: 20),
+                  onPressed: () =>
+                      _showSubjectBottomSheet(context, viewModel, item),
+                ),
+                const SizedBox(width: 12), // Khoảng cách giữa 2 nút
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  icon: const Icon(
+                    Icons.delete,
+                    color: Colors.redAccent,
+                    size: 20,
+                  ),
+                  onPressed: () =>
+                      _showDeleteSubjectConfirm(context, viewModel, item),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+  void _showSubjectBottomSheet(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    SubjectModel? existingItem,
+  ) {
+    final isEdit = existingItem != null;
+    final maMonCtrl = TextEditingController(text: existingItem?.maMonHoc ?? '');
+    final tenMonCtrl = TextEditingController(text: existingItem?.tenMon ?? '');
+    final soTinChiCtrl = TextEditingController(
+      text: existingItem?.soTinChi.toString() ?? '3',
+    );
+    String selectedLoai = (existingItem?.loaiMon == 'Chuyên ngành')
+        ? 'Chuyên ngành'
+        : 'Cơ sở';
+    final moTaCtrl = TextEditingController(text: existingItem?.moTa ?? '');
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(ctx).viewInsets.bottom,
+              left: 20,
+              right: 20,
+              top: 24,
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    isEdit ? 'Cập nhật Môn học' : 'Thêm Môn học mới',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF0F3E99),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 24),
+                  TextField(
+                    controller: maMonCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Mã môn học',
+                      hintText: 'VD: MH001',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    readOnly: isEdit,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: tenMonCtrl,
+                    decoration: InputDecoration(
+                      labelText: 'Tên môn học',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: DropdownButtonFormField<String>(
+                          isExpanded: true,
+                          initialValue: selectedLoai,
+                          decoration: InputDecoration(
+                            labelText: 'Loại môn',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'Cơ sở',
+                              child: Text(
+                                'Cơ sở',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            DropdownMenuItem(
+                              value: 'Chuyên ngành',
+                              child: Text(
+                                'Chuyên ngành',
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                          onChanged: (val) =>
+                              setState(() => selectedLoai = val!),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: soTinChiCtrl,
+                          keyboardType: TextInputType.number,
+                          decoration: InputDecoration(
+                            labelText: 'Số tín chỉ',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: moTaCtrl,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Mô tả (Tùy chọn)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0F3E99),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    onPressed: () async {
+                      if (maMonCtrl.text.trim().isEmpty ||
+                          tenMonCtrl.text.trim().isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Vui lòng nhập Mã và Tên môn học!'),
+                          ),
+                        );
+                        return;
+                      }
+                      final newData = SubjectModel(
+                        id: existingItem?.id ?? 0,
+                        maMonHoc: maMonCtrl.text.trim(),
+                        tenMon: tenMonCtrl.text.trim(),
+                        loaiMon: selectedLoai,
+                        soTinChi: int.tryParse(soTinChiCtrl.text) ?? 3,
+                        moTa: moTaCtrl.text.trim(),
+                      );
+                      final messenger = ScaffoldMessenger.of(context);
+                      final success = await viewModel.saveSubject(
+                        existingItem?.id,
+                        newData,
+                      );
+                      if (!ctx.mounted) return;
+                      Navigator.pop(ctx);
+                      if (success) {
+                        messenger.showSnackBar(
+                          const SnackBar(
+                            content: Text('Đã lưu môn học!'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      } else {
+                        messenger.showSnackBar(
+                          SnackBar(
+                            content: Text('Lỗi: ${viewModel.errorMessage}'),
+                            backgroundColor: Colors.redAccent,
+                          ),
+                        );
+                      }
+                    },
+                    child: const Text(
+                      'LƯU MÔN HỌC',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showDeleteSubjectConfirm(
+    BuildContext context,
+    AcademicViewModel viewModel,
+    SubjectModel item,
+  ) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text(
+          'Xác nhận xóa',
+          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+        ),
+        content: Text(
+          'Bạn có chắc chắn muốn xóa môn [${item.maMonHoc}] ${item.tenMon} không?\n\nLưu ý: Nếu môn này đang được sử dụng ở Lớp học phần, việc xóa sẽ bị từ chối.',
+          style: const TextStyle(height: 1.4),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Hủy', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.redAccent,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            onPressed: () async {
+              final messenger = ScaffoldMessenger.of(context);
+              final success = await viewModel.deleteSubject(item.id);
+              if (!ctx.mounted) return;
+              Navigator.pop(ctx);
+              if (success) {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Xóa môn học thành công!'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              } else {
+                messenger.showSnackBar(
+                  const SnackBar(
+                    content: Text('Xóa thất bại: Môn học đang được sử dụng!'),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                );
+              }
+            },
+            child: const Text('Xóa', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+}

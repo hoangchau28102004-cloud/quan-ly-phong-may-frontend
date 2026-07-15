@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter/gestures.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
-
+import 'package:flutter_phongmay/presentation/screens/layout/student_layout.dart';
 // Import 3 màn hình của 3 vai trò
-import 'package:flutter_phongmay/presentation/screens/admin/admin_home.dart';
-import 'package:flutter_phongmay/presentation/screens/lecturer/teacher_home.dart';
-import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
+import 'package:flutter_phongmay/presentation/screens/admin/user_management.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_home_screen.dart';
 
-const Color kAppBlue = Color(0xFF193D87);
-const Color kAppFooterGrey = Color(0xFFF5F5F5);
-const Color kInputBackground = Color(0xFFF9FAFB);
-const Color kInputBorder = Color(0xFFD1D5DB);
+
+// Các mã màu lấy từ thiết kế CTTC
+const Color kCtRed = Color(0xFFD32F2F);
+const Color kCtBlue = Color(0xFF0D6EFD);
+const Color kInputFill = Color(0xFFE8F0FE);
+const Color kBorderColor = Color(0xFFD1D5DB);
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -24,11 +27,34 @@ class _LoginScreenState extends State<LoginScreen> {
   final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
 
+  // Bộ nhận diện cử chỉ cho các đường link
+  late TapGestureRecognizer _ctctLinkRecognizer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Khởi tạo sự kiện bấm vào link
+    _ctctLinkRecognizer = TapGestureRecognizer()..onTap = _launchCTCTUrl;
+  }
+
   @override
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
+    _ctctLinkRecognizer.dispose();
     super.dispose();
+  }
+
+  // Hàm mở đường link web P.CTCT-HSSV
+  Future<void> _launchCTCTUrl() async {
+    final Uri url = Uri.parse('https://ctct.caothang.edu.vn/');
+    if (!await launchUrl(url, mode: LaunchMode.externalApplication)) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Không thể mở đường link này.')),
+        );
+      }
+    }
   }
 
   void _login() async {
@@ -45,12 +71,14 @@ class _LoginScreenState extends State<LoginScreen> {
           Widget nextScreen;
 
           if (user != null) {
+            // TỰ ĐỘNG PHÂN LUỒNG: Hệ thống lấy thẳng vaiTroId từ CSDL để chuyển trang
+            // 1: Admin, 2: Sinh viên, 3: Giảng viên
             if (user.vaiTroId == 1) {
-              nextScreen = const AdminHome();
-            } else if (user.vaiTroId == 2) {
+              nextScreen = const UserManagementScreen();
+            } else if (user.vaiTroId == 3) {
               nextScreen = const TeacherHome();
             } else {
-              nextScreen = const StudentHome();
+              nextScreen = const StudentLayout();
             }
 
             Navigator.pushReplacement(
@@ -61,9 +89,9 @@ class _LoginScreenState extends State<LoginScreen> {
         }
       } else {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(errorMessage)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMessage))
+          );
         }
       }
     }
@@ -74,187 +102,188 @@ class _LoginScreenState extends State<LoginScreen> {
     final isLoading = context.watch<LoginViewModel>().isLoading;
 
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: kAppBlue, width: 1.0),
-              borderRadius: BorderRadius.circular(12.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 20.0,
+              vertical: 24.0,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 40.0,
-                    horizontal: 20.0,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: kAppBlue,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(11.0),
-                      topRight: Radius.circular(11.0),
-                    ),
-                  ),
-                  child: Column(
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 450),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // --- HEADER ---
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(12.0),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10.0),
-                        ),
-                        child: Image.asset(
-                          'assets/img/logo.png',
-                          width: 48.0,
-                          height: 48.0,
-                          fit: BoxFit.contain,
-                        ),
+                      Image.asset(
+                        'assets/img/logo.png',
+                        height: 80,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.school, size: 80, color: kCtBlue),
                       ),
-                      const SizedBox(height: 24.0),
-                      const Text(
-                        'Hệ Thống Quản Lý Phòng Máy',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20.0,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 12.0),
-                      Container(width: 60.0, height: 3.0, color: Colors.white),
-                    ],
-                  ),
-                ),
-
-                Form(
-                  key: _formKey,
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Tài khoản (MSSV/Mã GV)',
-                          style: TextStyle(
-                            fontSize: 14.0,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8.0),
-                        TextFormField(
-                          controller: _usernameController,
-                          decoration: _getInputDecoration(
-                            hintText: 'Nhập tài khoản',
-                            prefixIcon: Icons.person_outline,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Vui lòng nhập tài khoản';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 20.0),
-
-                        const Text(
-                          'Mật khẩu',
-                          style: TextStyle(
-                            fontSize: 14.0,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        const SizedBox(height: 8.0),
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: true,
-                          decoration: _getInputDecoration(
-                            hintText: 'Nhập mật khẩu',
-                            prefixIcon: Icons.lock_outline,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Vui lòng nhập mật khẩu';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 32.0),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 54.0,
-                          child: ElevatedButton(
-                            onPressed: isLoading ? null : _login,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: kAppBlue,
-                              foregroundColor: Colors.white,
-                              elevation: 0.0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(8.0),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: const [
+                            Text(
+                              'TRƯỜNG CĐ KỸ THUẬT CAO THẮNG',
+                              style: TextStyle(
+                                color: kCtRed,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'CTTC ERP SYSTEM',
+                              style: TextStyle(
+                                color: Color(0xFF495057),
+                                fontSize: 16,
                               ),
                             ),
-                            child: isLoading
-                                ? const SizedBox(
-                                    height: 24,
-                                    width: 24,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2.5,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Đăng nhập',
-                                    style: TextStyle(
-                                      fontSize: 17.0,
-                                      fontWeight: FontWeight.bold,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                          ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                ),
+                  const SizedBox(height: 40),
 
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 24.0,
-                    horizontal: 20.0,
-                  ),
-                  decoration: const BoxDecoration(
-                    color: kAppFooterGrey,
-                    borderRadius: BorderRadius.only(
-                      bottomLeft: Radius.circular(11.0),
-                      bottomRight: Radius.circular(11.0),
-                    ),
-                  ),
-                  child: const Text(
-                    'Cổng thông tin dành cho Sinh viên, Giảng viên và Quản trị viên',
+                  // --- Tiêu đề Form ---
+                  const Text(
+                    'Đăng nhập hệ thống',
                     style: TextStyle(
-                      color: Colors.black54,
-                      fontSize: 13.0,
-                      height: 1.4,
+                      fontSize: 22,
+                      fontWeight: FontWeight.normal,
+                      color: Color(0xFF212529),
                     ),
                     textAlign: TextAlign.center,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 20),
+
+                  // --- FORM ĐĂNG NHẬP ---
+                  Container(
+                    padding: const EdgeInsets.all(24.0),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      border: Border.all(color: kBorderColor, width: 1),
+                      borderRadius: BorderRadius.circular(4.0),
+                    ),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildLabel('Email trường / Tên đăng nhập:'),
+                          const SizedBox(height: 8.0),
+                          TextFormField(
+                            controller: _usernameController,
+                            decoration: _getInputDecoration('VD: mssv@caothang.edu.vn'),
+                            validator: (value) => value!.trim().isEmpty
+                                ? 'Vui lòng nhập tên đăng nhập'
+                                : null,
+                          ),
+                          const SizedBox(height: 16.0),
+
+                          _buildLabel('Mật Khẩu:'),
+                          const SizedBox(height: 8.0),
+                          TextFormField(
+                            controller: _passwordController,
+                            obscureText: true,
+                            decoration: _getInputDecoration('Nhập mật khẩu'),
+                            validator: (value) => value!.isEmpty
+                                ? 'Vui lòng nhập mật khẩu'
+                                : null,
+                          ),
+                          const SizedBox(height: 30.0),
+
+                          // Nút đăng nhập
+                          Center(
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 45,
+                              child: ElevatedButton.icon(
+                                onPressed: isLoading ? null : _login,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: kCtBlue,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4.0),
+                                  ),
+                                ),
+                                icon: isLoading
+                                    ? const SizedBox.shrink()
+                                    : const Icon(Icons.login, size: 20),
+                                label: isLoading
+                                    ? const SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Text(
+                                        'Đăng nhập',
+                                        style: TextStyle(
+                                          fontSize: 16, 
+                                          fontWeight: FontWeight.bold
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24.0),
+
+                          // --- CÂU THÔNG BÁO DƯỚI NÚT ---
+                          Center(
+                            child: RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                style: const TextStyle(
+                                  color: Colors.black87,
+                                  fontSize: 13.5,
+                                ),
+                                children: [
+                                  const TextSpan(
+                                    text: 'Quên mật khẩu? Vui lòng liên hệ ',
+                                  ),
+                                  TextSpan(
+                                    text: 'P.CTCT-HSSV',
+                                    style: const TextStyle(
+                                      color: kCtBlue,
+                                      fontStyle: FontStyle.italic,
+                                    ),
+                                    recognizer: _ctctLinkRecognizer, 
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 40),
+
+                  // --- FOOTER ---
+                  const Text(
+                    'CTTC ERP SYSTEM',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'Copyright © 2021',
+                    style: TextStyle(fontSize: 14, color: Colors.black87),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -262,39 +291,40 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  InputDecoration _getInputDecoration({
-    required String hintText,
-    required IconData prefixIcon,
-  }) {
+  // --- HÀM HELPER VẼ LABEL ---
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 14.0, 
+        color: Colors.black87, 
+        fontWeight: FontWeight.w600
+      ),
+    );
+  }
+
+  // --- HÀM HELPER VẼ INPUT ---
+  InputDecoration _getInputDecoration(String hint) {
     return InputDecoration(
       filled: true,
-      fillColor: kInputBackground,
-      hintText: hintText,
-      hintStyle: const TextStyle(color: Colors.black38, fontSize: 15.0),
-      prefixIcon: Icon(prefixIcon, color: Colors.black45, size: 22.0),
+      fillColor: kInputFill,
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade500, fontSize: 14),
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 16.0,
-        vertical: 16.0,
+        vertical: 14.0,
       ),
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: kInputBorder),
+        borderRadius: BorderRadius.circular(4.0),
+        borderSide: const BorderSide(color: kBorderColor),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: kInputBorder),
+        borderRadius: BorderRadius.circular(4.0),
+        borderSide: const BorderSide(color: kBorderColor),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: kAppBlue, width: 2.0),
-      ),
-      errorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: Colors.red, width: 1.0),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(8.0),
-        borderSide: const BorderSide(color: Colors.red, width: 2.0),
+        borderRadius: BorderRadius.circular(4.0),
+        borderSide: const BorderSide(color: kCtBlue, width: 1.5),
       ),
     );
   }

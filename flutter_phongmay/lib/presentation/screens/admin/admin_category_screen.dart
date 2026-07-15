@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 
 class AdminCategoryScreen extends StatefulWidget {
-  const AdminCategoryScreen({Key? key}) : super(key: key);
+  const AdminCategoryScreen({super.key});
 
   @override
   _AdminCategoryScreenState createState() => _AdminCategoryScreenState();
@@ -63,6 +63,150 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
       } catch (_) {}
     } catch (_) {}
     setState(() => _loading = false);
+  }
+
+  Future<void> _addCategoryItem(String categoryName) async {
+    final ctrl = TextEditingController();
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Thêm $categoryName'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(labelText: 'Tên'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = ctrl.text.trim();
+              if (name.isEmpty) return;
+              String endpoint = '/thiet-bi';
+              Map<String, dynamic> payload = {};
+              final key = categoryName.toLowerCase();
+              if (key.contains('thiết')) {
+                endpoint = '/thiet-bi';
+                payload = {'ten_tb': name, 'so_luong_tong': 0};
+              } else if (key.contains('lớp') || key.contains('lop')) {
+                endpoint = '/lop-hoc';
+                payload = {'ma_lop': name};
+              } else if (key.contains('môn') || key.contains('mon')) {
+                endpoint = '/mon-hoc';
+                payload = {'ten_mon': name};
+              } else if (key.contains('ca')) {
+                endpoint = '/ca-hoc';
+                payload = {'ten_ca': name};
+              }
+              try {
+                await ApiService.post(endpoint, payload);
+              } catch (_) {}
+              Navigator.of(ctx).pop();
+              await _loadData();
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _editCategoryItem(
+    Map<String, dynamic> item,
+    String categoryName,
+  ) async {
+    final id = item['id'];
+    if (id == null) return;
+    final ctrl = TextEditingController();
+    final key = categoryName.toLowerCase();
+    String initial = '';
+    if (key.contains('thiết')) initial = item['ten_tb']?.toString() ?? '';
+    if (key.contains('lớp')) initial = item['ma_lop']?.toString() ?? '';
+    if (key.contains('môn')) initial = item['ten_mon']?.toString() ?? '';
+    if (key.contains('ca')) initial = item['ten_ca']?.toString() ?? '';
+    ctrl.text = initial;
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Chỉnh sửa $categoryName'),
+        content: TextField(
+          controller: ctrl,
+          decoration: const InputDecoration(labelText: 'Tên'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Hủy'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              final name = ctrl.text.trim();
+              if (name.isEmpty) return;
+              String endpoint = '/thiet-bi';
+              Map<String, dynamic> payload = {};
+              if (key.contains('thiết')) {
+                endpoint = '/thiet-bi/$id';
+                payload = {'ten_tb': name};
+              } else if (key.contains('lớp')) {
+                endpoint = '/lop-hoc/$id';
+                payload = {'ma_lop': name};
+              } else if (key.contains('môn')) {
+                endpoint = '/mon-hoc/$id';
+                payload = {'ten_mon': name};
+              } else if (key.contains('ca')) {
+                endpoint = '/ca-hoc/$id';
+                payload = {'ten_ca': name};
+              }
+              try {
+                await ApiService.put(endpoint, payload);
+              } catch (_) {}
+              Navigator.of(ctx).pop();
+              await _loadData();
+            },
+            child: const Text('Lưu'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteCategoryItem(
+    Map<String, dynamic> item,
+    String categoryName,
+  ) async {
+    final id = item['id'];
+    if (id == null) return;
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Xác nhận'),
+            content: const Text('Bạn có chắc muốn xóa mục này?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Hủy'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(true),
+                child: const Text('Xóa'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+    if (!ok) return;
+    final key = categoryName.toLowerCase();
+    String endpoint = '/thiet-bi/$id';
+    if (key.contains('lớp') || key.contains('lop')) endpoint = '/lop-hoc/$id';
+    if (key.contains('môn') || key.contains('mon')) endpoint = '/mon-hoc/$id';
+    if (key.contains('ca')) endpoint = '/ca-hoc/$id';
+    try {
+      await ApiService.delete(endpoint);
+    } catch (_) {}
+    await _loadData();
   }
 
   @override
@@ -162,7 +306,7 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
                 borderRadius: BorderRadius.zero,
               ),
             ),
-            onPressed: () {},
+            onPressed: () => _addCategoryItem(categoryName),
             icon: const Icon(Icons.add, color: Colors.white),
             label: Text(
               'Thêm $categoryName',
@@ -181,61 +325,151 @@ class _AdminCategoryScreenState extends State<AdminCategoryScreen> {
               color: Colors.white,
               border: Border.all(color: const Color(0xFFD1D5DB)),
             ),
-            child: SingleChildScrollView(
-              child: DataTable(
-                headingRowColor: MaterialStateProperty.all(
-                  Colors.grey.shade100,
-                ),
-                columns: [
-                  const DataColumn(
-                    label: Text(
-                      'ID',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isCompact = constraints.maxWidth < 900;
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minWidth: constraints.maxWidth.isFinite
+                          ? constraints.maxWidth
+                          : MediaQuery.of(context).size.width,
                     ),
-                  ),
-                  DataColumn(
-                    label: Text(
-                      columnLabel,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const DataColumn(
-                    label: Text(
-                      'Tổng số lượng',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const DataColumn(
-                    label: Text(
-                      'Thao tác',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-                rows: data.map((item) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(item['id'].toString())),
-                      DataCell(Text(item['ten_tb'])),
-                      DataCell(Text(item['so_luong_tong'].toString())),
-                      DataCell(
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              onPressed: () {},
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {},
-                            ),
-                          ],
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingRowColor: WidgetStateProperty.all(
+                          Colors.grey.shade100,
                         ),
+                        columnSpacing: 24,
+                        columns: isCompact
+                            ? [
+                                const DataColumn(
+                                  label: Text(
+                                    'ID',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const DataColumn(
+                                  label: Text(
+                                    'Thao tác',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ]
+                            : [
+                                const DataColumn(
+                                  label: Text(
+                                    'ID',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                DataColumn(
+                                  label: Text(
+                                    columnLabel,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const DataColumn(
+                                  label: Text(
+                                    'Tổng số lượng',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                const DataColumn(
+                                  label: Text(
+                                    'Thao tác',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                        rows: data.map((item) {
+                          if (isCompact) {
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(item['id'].toString())),
+                                DataCell(
+                                  Row(
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.edit,
+                                          color: Colors.orange,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _editCategoryItem(
+                                          item,
+                                          categoryName,
+                                        ),
+                                      ),
+                                      IconButton(
+                                        icon: const Icon(
+                                          Icons.delete,
+                                          color: Colors.redAccent,
+                                          size: 20,
+                                        ),
+                                        onPressed: () => _deleteCategoryItem(
+                                          item,
+                                          categoryName,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          return DataRow(
+                            cells: [
+                              DataCell(Text(item['id'].toString())),
+                              DataCell(Text(item['ten_tb'])),
+                              DataCell(Text(item['so_luong_tong'].toString())),
+                              DataCell(
+                                Row(
+                                  children: [
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.edit,
+                                        color: Colors.orange,
+                                        size: 20,
+                                      ),
+                                      onPressed: () =>
+                                          _editCategoryItem(item, categoryName),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.delete,
+                                        color: Colors.redAccent,
+                                        size: 20,
+                                      ),
+                                      onPressed: () => _deleteCategoryItem(
+                                        item,
+                                        categoryName,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          );
+                        }).toList(),
                       ),
-                    ],
-                  );
-                }).toList(),
-              ),
+                    ),
+                  ),
+                );
+              },
             ),
           ),
         ),

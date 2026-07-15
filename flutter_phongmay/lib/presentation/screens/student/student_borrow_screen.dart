@@ -199,7 +199,49 @@ class _StudentBorrowScreenState extends State<StudentBorrowScreen> {
                       borderRadius: BorderRadius.zero,
                     ),
                   ),
-                  onPressed: () {},
+                  onPressed: () async {
+                    final selected = _equipmentList
+                        .where((e) => (e['selected_qty'] as int? ?? 0) > 0)
+                        .toList();
+                    if (selected.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'Vui lòng chọn thiết bị trước khi gửi yêu cầu',
+                          ),
+                        ),
+                      );
+                      return;
+                    }
+                    await showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Xác nhận'),
+                        content: Text(
+                          'Bạn có chắc muốn gửi yêu cầu mượn ${selected.length} mục không?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(ctx).pop(),
+                            child: const Text('Hủy'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () async {
+                              Navigator.of(ctx).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Gửi yêu cầu (giả lập) thành công',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Gửi'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                   child: const Text(
                     'Gửi Yêu Cầu Mượn Thiết Bị',
                     style: TextStyle(

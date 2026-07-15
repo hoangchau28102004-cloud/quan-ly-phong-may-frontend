@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_phongmay/presentation/screens/student/student_home.dart';
 import 'package:flutter_phongmay/presentation/screens/student/student_borrow_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/profile/profile_screen.dart';
-
+import '../student/student_dashboard_screen.dart'; 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
   @override
@@ -14,7 +13,7 @@ class _MainLayoutState extends State<MainLayout> {
   final Color primaryNavy = const Color(0xFF1D357A);
 
   final List<Widget> _screens = [
-    const StudentHome(),
+    const StudentDashboardScreen(),
     const StudentBorrowScreen(),
     const ProfileScreen(),
   ];

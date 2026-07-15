@@ -49,14 +49,14 @@ class _ScanActionScreenState extends State<ScanActionScreen> {
   Future<void> _submitData() async {
     try {
       await ApiService.post('/diem-danh', {
-        'may_tinh_id': _pcDetails?['id'],
+        'ma_may_tinh': _pcDetails?['id'],
         'tt_diem_danh': _attendanceStatus,
         'tt_may_tinh': _pcStatus,
       });
 
       if (_pcStatus == 'CO_LOI' && _issueController.text.isNotEmpty) {
         await ApiService.post('/bao-cao-su-co', {
-          'may_tinh_id': _pcDetails?['id'],
+          'ma_may_tinh': _pcDetails?['id'],
           'mo_ta': _issueController.text,
           'trang_thai': 'CHO_XU_LY',
         });
@@ -115,17 +115,22 @@ class _ScanActionScreenState extends State<ScanActionScreen> {
                         ),
                         const Divider(height: 20),
                         Text(
-                          'Hệ điều hành: ${_pcDetails?['he_dieu_hanh'] ?? 'Windows 11'}',
+                          'Máy: ${_pcDetails?['ma_may'] ?? _pcDetails?['ten_may'] ?? 'N/A'}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 6),
+                        Text('CPU: ${_pcDetails?['bo_xu_ly'] ?? 'N/A'}'),
+                        const SizedBox(height: 6),
+                        Text('RAM: ${_pcDetails?['ram'] ?? 'N/A'}'),
+                        const SizedBox(height: 6),
+                        Text('GPU: ${_pcDetails?['card_do_hoa'] ?? 'N/A'}'),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Ổ cứng: ${_pcDetails?['ssd'] ?? _pcDetails?['hdd'] ?? 'N/A'}',
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Bộ xử lý (CPU): ${_pcDetails?['cpu'] ?? 'Intel Core i7'}',
-                        ),
-                        const SizedBox(height: 6),
-                        Text('Bộ nhớ RAM: ${_pcDetails?['ram'] ?? '16GB'}'),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Card đồ họa (GPU): ${_pcDetails?['gpu'] ?? 'RTX 3060'}',
+                          'Ghi chú: ${_pcDetails?['ghi_chu'] ?? 'Không có'}',
                         ),
                       ],
                     ),
