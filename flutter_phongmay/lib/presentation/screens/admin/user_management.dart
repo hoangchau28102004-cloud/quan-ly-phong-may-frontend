@@ -97,8 +97,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
       try {
         await onConfirm();
         _showMessage(successMessage);
-        if (mounted)
+        if (mounted) {
           Provider.of<UserViewModel>(context, listen: false).fetchUsers();
+        }
       } catch (e) {
         _showMessage('Lỗi: ${e.toString()}', isError: true);
       }
@@ -322,8 +323,9 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
                         firstDate: DateTime(1950),
                         lastDate: DateTime.now(),
                       );
-                      if (date != null)
+                      if (date != null) {
                         setStateDialog(() => selectedDob = date);
+                      }
                     },
                     child: InputDecorator(
                       decoration: const InputDecoration(
@@ -512,10 +514,12 @@ class _UserManagementScreenState extends State<UserManagementScreen> {
           final v = parts[j];
           if (k.contains('ho') || k.contains('name')) hoTen = v;
           if (k.contains('email')) email = v;
-          if (k.contains('phone') || k.contains('dien') || k.contains('so'))
+          if (k.contains('phone') || k.contains('dien') || k.contains('so')) {
             phone = v;
-          if (k.contains('vai') || k.contains('role') || k.contains('ma_vai'))
+          }
+          if (k.contains('vai') || k.contains('role') || k.contains('ma_vai')) {
             roleId = int.tryParse(v);
+          }
         }
       } else {
         if (parts.isNotEmpty) hoTen = parts[0];

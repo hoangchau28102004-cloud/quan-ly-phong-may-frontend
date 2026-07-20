@@ -137,8 +137,9 @@ class _IncidentMaintenanceManagementScreenState
   int? _getValidId(dynamic id, List<dynamic> list) {
     if (id == null) return null;
     final parsedId = int.tryParse(id.toString());
-    if (parsedId != null && list.any((e) => e['id'] == parsedId))
+    if (parsedId != null && list.any((e) => e['id'] == parsedId)) {
       return parsedId;
+    }
     return null;
   }
 
@@ -146,8 +147,9 @@ class _IncidentMaintenanceManagementScreenState
     if (val == null) return 'Sửa chữa';
     final lower = val.toLowerCase();
     if (lower.contains('thay')) return 'Thay thế';
-    if (lower.contains('vệ sinh') || lower.contains('bảo dưỡng'))
+    if (lower.contains('vệ sinh') || lower.contains('bảo dưỡng')) {
       return 'Vệ sinh';
+    }
     return 'Sửa chữa';
   }
 
@@ -328,8 +330,9 @@ class _IncidentMaintenanceManagementScreenState
                                       firstDate: DateTime(2020),
                                       lastDate: DateTime(2030),
                                     );
-                                    if (d != null)
+                                    if (d != null) {
                                       setModalState(() => startDate = d);
+                                    }
                                   },
                             child: Container(
                               padding: const EdgeInsets.all(14),
@@ -361,8 +364,9 @@ class _IncidentMaintenanceManagementScreenState
                                       firstDate: DateTime(2020),
                                       lastDate: DateTime(2030),
                                     );
-                                    if (d != null)
+                                    if (d != null) {
                                       setModalState(() => endDate = d);
+                                    }
                                   },
                             child: Container(
                               padding: const EdgeInsets.all(14),

@@ -44,6 +44,8 @@ class StudentDashboardViewModel extends ChangeNotifier {
     _loading = true; // Vẫn dùng biến cũ có dấu gạch dưới
     notifyListeners();
 
+    bool loadedFromDashboardApi = false;
+
     try {
       final response = await ApiService.get('/student-dashboard/$userId');
       final decoded = ApiService.decodeBody(response);
@@ -53,7 +55,6 @@ class StudentDashboardViewModel extends ChangeNotifier {
           decoded['data'] != null) {
         final data = decoded['data'];
 
-        // Cập nhật vào các biến private cũ của bác
         _coursesCount = data['coursesCount'] ?? 0;
         _upcoming = data['upcoming'] != null
             ? List<dynamic>.from(data['upcoming'])
@@ -65,22 +66,36 @@ class StudentDashboardViewModel extends ChangeNotifier {
             ? List<dynamic>.from(data['recentIncidents'])
             : [];
 
-        debugPrint('✅ Data OK: $_coursesCount');
+        loadedFromDashboardApi = true;
+        debugPrint('✅ student-dashboard API OK: $_coursesCount');
       } else {
         debugPrint(
-          '❌ Server trả về: ${response.statusCode} - ${response.body}',
+          '❌ student-dashboard API trả về: ${response.statusCode} - ${response.body}',
         );
       }
     } catch (e) {
-      debugPrint("❌ Lỗi: $e");
-    } finally {
-      _loading = false;
-      notifyListeners();
+      debugPrint("❌ student-dashboard API lỗi: $e");
     }
+
+    if (!loadedFromDashboardApi || _upcoming.isEmpty) {
+      debugPrint(
+        '⚠️ Fallback sang /schedule/student vì student-dashboard không có dữ liệu valid.',
+      );
+      final schedules = await fetchStudentSchedules(userId, token);
+      if (schedules.isNotEmpty) {
+        _upcoming = schedules;
+        if (_coursesCount == 0) {
+          _coursesCount = schedules.length;
+        }
+      }
+    }
+
+    _loading = false;
+    notifyListeners();
   }
 
   // 2. TẢI LỊCH HỌC
-  Future<void> fetchStudentSchedules(int userId, String token) async {
+  Future<List<dynamic>> fetchStudentSchedules(int userId, String token) async {
     _isLoadingSchedule = true;
     notifyListeners();
 
@@ -91,8 +106,10 @@ class StudentDashboardViewModel extends ChangeNotifier {
       final decoded = ApiService.decodeBody(response);
 
       if (response.statusCode == 200 && decoded != null) {
-        _schedules = decoded['data'] ?? [];
+        final data = decoded['data'];
+        _schedules = data is List ? data : [];
         _filterSchedulesByDay();
+        return _schedules;
       } else {
         debugPrint(
           '❌ Server trả về lịch học: ${response.statusCode} - ${response.body}',
@@ -104,6 +121,8 @@ class StudentDashboardViewModel extends ChangeNotifier {
       _isLoadingSchedule = false;
       notifyListeners();
     }
+
+    return [];
   }
 
   void changeSelectedDay(int index) {

@@ -1,34 +1,25 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiService {
   // Biến lưu token đăng nhập dùng chung cho toàn app
   static String? token;
 
-  // Link Server Render chạy online cố định
-  static const String _liveUrl =
-      'https://quan-ly-phong-may-backend.onrender.com';
+  // Link server online chính thức
+  static const String _liveUrl = 'https://api.rokia.top';
 
   // Lấy Base URL một cách thông minh
+  // Lấy Base URL một cách thông minh
   static String get baseUrl {
-    // Tạm thời vô hiệu hóa .env trong lúc debug để ép app chạy vào máy tính của ông
-    final envUrl = kDebugMode ? null : dotenv.env['API_BASE_URL'];
-
+    // Tạm thời vô hiệu hóa việc lấy API_BASE_URL từ file .env để ép nó chạy Local
+    // final envUrl = dotenv.env['API_BASE_URL'];
     String? urlCandidate;
 
-    // 1) Nếu có cấu hình trong .env (và không ở debug mode) thì dùng nó
-    if (envUrl != null && envUrl.isNotEmpty) {
-      urlCandidate = envUrl;
-    }
-
-    // 2) Nếu không có .env và đang chạy ở chế độ debug
     if (urlCandidate == null || urlCandidate.isEmpty) {
       if (kDebugMode) {
-        // 🚀 ĐÃ FIX: Trỏ thẳng vào IP LAN của máy tính chứa Backend
-        // (Nếu nãy ông đổi port Node.js sang 8002 thì sửa số 8001 dưới đây thành 8002 nhé)
-        urlCandidate = 'http://192.168.1.4:8001'; 
+        // 🚀 THAY ĐÚNG IP MÁY TÍNH CỦA BẠN TRONG ẢNH VÀO ĐÂY
+        urlCandidate = 'https://api.rokia.top'; 
       } else {
         // Production fallback: dùng server online
         return _liveUrl;
@@ -42,11 +33,15 @@ class ApiService {
       url = '$url/api';
     }
 
-    // Nếu chạy trên giả lập Android thì đổi về 10.0.2.2, còn chạy máy thật (Vivo) thì giữ nguyên IP
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-      url = url
-          .replaceAll('127.0.0.1', '10.0.2.2')
-          .replaceAll('localhost', '10.0.2.2');
+    // 🚀 ĐÃ COMMENT ĐOẠN 10.0.2.2 ĐỂ DÙNG ĐƯỢC TRÊN ĐIỆN THOẠI THẬT
+    // if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+    //   url = url
+    //       .replaceAll('127.0.0.1', '10.0.2.2')
+    //       .replaceAll('localhost', '10.0.2.2');
+    // }
+
+    if (kDebugMode) {
+      debugPrint('🚀 ApiService.baseUrl ĐANG CHẠY LÀ -> $url');
     }
 
     return url;

@@ -26,7 +26,7 @@ class _ReturnMachineScreenState extends State<ReturnMachineScreen> {
   int? _selectedReceiptId;
 
   List<dynamic> _borrowedMachines = [];
-  Set<String> _selectedMachineIds = {};
+  final Set<String> _selectedMachineIds = {};
 
   @override
   void initState() {

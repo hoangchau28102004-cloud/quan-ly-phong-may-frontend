@@ -11,6 +11,7 @@ import 'package:flutter_phongmay/data/repositories/user_repository_impl.dart';
 import 'package:flutter_phongmay/presentation/providers/student_dashboard_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/issue_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/import_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/providers/notification_viewmodel.dart';
 
 // --- TẦNG GIAO DIỆN ---
 import 'package:flutter_phongmay/presentation/screens/auth/login_screen.dart';
@@ -59,6 +60,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => StudentDashboardViewModel()),
         ChangeNotifierProvider(create: (_) => ImportViewModel()),
         ChangeNotifierProvider(create: (_) => IssueViewModel()),
+        ChangeNotifierProvider(create: (_) => NotificationViewModel()),
       ],
       child: const MyApp(),
     ),

@@ -122,8 +122,11 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             _buildMenuItem(
               icon: Icons.calendar_month_outlined,
               title: 'Lịch dạy của tôi',
-              onTap: () =>
-                  Navigator.pop(context), // Bấm vào sẽ lùi về trang Home
+              onTap: () {
+                // Chuyển sang màn hình Lịch dạy (TeacherHome) thay vì pop(),
+                // tránh tình huống pop khi widget đang là phần của tab gây màn hình đen.
+                Navigator.pushNamed(context, '/lecturer_home');
+              },
             ),
             _buildMenuItem(
               icon: Icons.receipt_long_outlined,
@@ -239,20 +242,23 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       ),
       child: ListTile(
         leading: Icon(icon, color: kAppBlue),
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.black87,
-          ),
-        ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (badges != null) ...badges,
-            const Icon(Icons.chevron_right, color: Colors.grey),
+            Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+            if (badges != null) ...[
+              const SizedBox(height: 6),
+              Row(mainAxisSize: MainAxisSize.min, children: badges),
+            ],
           ],
         ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
         onTap: onTap,
       ),
     );

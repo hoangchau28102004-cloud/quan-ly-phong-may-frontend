@@ -239,8 +239,9 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
   // TAB 1: LỊCH SỬ ĐIỀU CHUYỂN
   // ==========================================
   Widget _buildTransferHistoryTab() {
-    if (_transfers.isEmpty)
+    if (_transfers.isEmpty) {
       return _buildEmptyState('Chưa có lịch sử điều chuyển');
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -340,8 +341,9 @@ class _MachineDetailScreenState extends State<MachineDetailScreen> {
   // Lấy data từ bảng bao_cao_su_co thông qua getMachineMaintenanceHistory của bác
   // ==========================================
   Widget _buildMaintenanceHistoryTab() {
-    if (_maintenances.isEmpty)
+    if (_maintenances.isEmpty) {
       return _buildEmptyState('Máy chưa có sự cố sửa chữa');
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),

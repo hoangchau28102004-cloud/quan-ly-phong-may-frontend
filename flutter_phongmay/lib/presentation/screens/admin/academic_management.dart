@@ -127,10 +127,11 @@ class _AcademicYearListBodyState extends State<AcademicYearListBody> {
         _years = ApiService.decodeBody(res)?['data'] ?? [];
       });
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Lỗi tải năm học: $e')));
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -192,19 +193,21 @@ class _AcademicYearListBodyState extends State<AcademicYearListBody> {
     if (confirm == true) {
       try {
         await ApiService.delete('/nam-hoc/$id');
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Đã xóa thành công!'),
               backgroundColor: Colors.green,
             ),
           );
+        }
         _loadData();
       } catch (e) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
           );
+        }
       }
     }
   }

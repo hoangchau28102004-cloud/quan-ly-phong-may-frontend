@@ -33,9 +33,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Widget build(BuildContext context) {
     final vm = context.watch<StudentDashboardViewModel>();
     final loginVm = context.watch<LoginViewModel>();
-    
+
     final userName = loginVm.currentUser?.hoTen ?? 'Sinh viên';
     final userEmail = loginVm.currentUser?.email ?? 'sv@caothang.edu.vn';
+    final validUpcomingList = _getValidUpcomingItems(vm.upcoming);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -47,24 +48,28 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               color: const Color(0xFF1E3A8A),
               onRefresh: _loadDashboardData,
               child: vm.loading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF1E3A8A)))
-                : SingleChildScrollView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildStatisticsGrid(vm),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Buổi học sắp tới'),
-                        _buildUpcomingList(vm.upcoming),
-                        const SizedBox(height: 24),
-                        _buildSectionTitle('Điểm danh gần đây'),
-                        _buildRecentAttendance(vm.recentAttendance),
-                        const SizedBox(height: 24), 
-                      ],
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF1E3A8A),
+                      ),
+                    )
+                  : SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _buildStatisticsGrid(vm, validUpcomingList.length),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Buổi học sắp tới'),
+                          _buildUpcomingList(validUpcomingList),
+                          const SizedBox(height: 24),
+                          _buildSectionTitle('Điểm danh gần đây'),
+                          _buildRecentAttendance(vm.recentAttendance),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
                     ),
-                  ),
             ),
           ),
         ],
@@ -92,18 +97,40 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               Container(
                 width: 52,
                 height: 52,
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                child: const Icon(Icons.person, color: Color(0xFF1E3A8A), size: 34),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.person,
+                  color: Color(0xFF1E3A8A),
+                  size: 34,
+                ),
               ),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min, 
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(name, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    Text(
+                      name,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(email, style: TextStyle(color: Colors.white.withOpacity(0.8), fontSize: 14)),
+                    Text(
+                      email,
+                      style: TextStyle(
+                        color: Colors.white.withValues(
+                          alpha: (0.8 * 255).toInt().toDouble(),
+                        ),
+                        fontSize: 14,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -114,7 +141,7 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
     );
   }
 
-  Widget _buildStatisticsGrid(StudentDashboardViewModel vm) {
+  Widget _buildStatisticsGrid(StudentDashboardViewModel vm, int upcomingCount) {
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
       shrinkWrap: true,
@@ -123,10 +150,30 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       mainAxisSpacing: 12,
       childAspectRatio: 1.8,
       children: [
-        _statCard('Lớp học phần', vm.coursesCount.toString(), Icons.book_outlined, Colors.blue),
-        _statCard('Buổi sắp tới', vm.upcoming.length.toString(), Icons.schedule_outlined, Colors.orange),
-        _statCard('Điểm danh', vm.recentAttendance.length.toString(), Icons.check_circle_outline, Colors.green),
-        _statCard('Sự cố mở', vm.recentIncidents.length.toString(), Icons.warning_amber_rounded, Colors.red),
+        _statCard(
+          'Lớp học phần',
+          vm.coursesCount.toString(),
+          Icons.book_outlined,
+          Colors.blue,
+        ),
+        _statCard(
+          'Buổi sắp tới',
+          upcomingCount.toString(),
+          Icons.schedule_outlined,
+          Colors.orange,
+        ),
+        _statCard(
+          'Điểm danh',
+          vm.recentAttendance.length.toString(),
+          Icons.check_circle_outline,
+          Colors.green,
+        ),
+        _statCard(
+          'Sự cố mở',
+          vm.recentIncidents.length.toString(),
+          Icons.warning_amber_rounded,
+          Colors.red,
+        ),
       ],
     );
   }
@@ -136,7 +183,13 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.grey.shade200, blurRadius: 6, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.shade200,
+            blurRadius: 6,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       padding: const EdgeInsets.all(12),
       child: Row(
@@ -144,7 +197,10 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: (0.1 * 255).toDouble()),
+              shape: BoxShape.circle,
+            ),
             child: Icon(icon, color: color, size: 24),
           ),
           const SizedBox(width: 12),
@@ -153,8 +209,18 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Text(count, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 12), overflow: TextOverflow.ellipsis),
+                Text(
+                  count,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  title,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ],
             ),
           ),
@@ -166,36 +232,155 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+      child: Text(
+        title,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: Colors.black87,
+        ),
+      ),
     );
   }
 
   Widget _buildUpcomingList(List<dynamic> upcomingList) {
-    if (upcomingList.isEmpty) return _emptyState('Không có lịch học sắp tới.');
+    if (upcomingList.isEmpty) {
+      return _emptyState('Không có lịch học sắp tới.');
+    }
+
     return Column(
       children: upcomingList.map((item) {
-        // Móc đúng Key từ câu SQL của đại ca ở Backend
-        final tenMon = item['ten_mon'] ?? 'Môn học chưa rõ';
-        final thoiGian = item['thoi_gian'] ?? item['thoiGian'] ?? 'Đang cập nhật';
-        final phong = item['ten_phong'] ?? 'Đang cập nhật';
+        final tenMon = item['ten_mon'] ?? item['tenMon'] ?? 'Môn học chưa rõ';
+        final lop = item['ma_lhp_str'] ?? item['ma_lop'] ?? item['maLop'] ?? '';
+        final giangVien =
+            item['ten_giang_vien'] ??
+            item['tenGiangVien'] ??
+            'Giáo viên chưa rõ';
+        final phong = item['ten_phong'] ?? item['tenPhong'] ?? 'Đang cập nhật';
+        final ngayHocRaw = item['ngay_hoc'] ?? item['ngayHoc'] ?? '';
+        final tietBatDau =
+            item['tiet_bat_dau'] ??
+            item['tietBatDau'] ??
+            item['gio_bat_dau'] ??
+            item['gioBatDau'] ??
+            '';
+        final tietKetThuc =
+            item['tiet_ket_thuc'] ??
+            item['tietKetThuc'] ??
+            item['gio_ket_thuc'] ??
+            item['gioKetThuc'] ??
+            '';
+        final dateText = _formatDate(ngayHocRaw.toString());
+        final timeText = _formatTiet(
+          tietBatDau.toString(),
+          tietKetThuc.toString(),
+        );
 
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 0,
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            leading: Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
-              child: Icon(Icons.timer_outlined, color: Colors.orange.shade700),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 12,
             ),
-            title: Text(tenMon, style: const TextStyle(fontWeight: FontWeight.bold)),
-            subtitle: Text('Thời gian: $thoiGian\nPhòng: $phong'),
+            leading: Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                Icons.schedule_outlined,
+                color: Colors.orange.shade700,
+                size: 24,
+              ),
+            ),
+            title: Text(
+              tenMon,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (lop.isNotEmpty) Text('Lớp: $lop'),
+                Text('Giáo viên: $giangVien'),
+                Text('Phòng: $phong'),
+                if (dateText.isNotEmpty) Text('Ngày: $dateText'),
+                if (timeText.isNotEmpty) Text('Tiết: $timeText'),
+              ],
+            ),
           ),
         );
       }).toList(),
     );
+  }
+
+  List<dynamic> _getValidUpcomingItems(List<dynamic> items) {
+    return items.where((item) {
+      final rawDate = item['ngay_hoc'] ?? item['ngayHoc'];
+      final tenMon = item['ten_mon'] ?? item['tenMon'];
+      final giangVien = item['ten_giang_vien'] ?? item['tenGiangVien'];
+      final tietBatDau =
+          item['tiet_bat_dau'] ??
+          item['tietBatDau'] ??
+          item['gio_bat_dau'] ??
+          item['gioBatDau'];
+      final tietKetThuc =
+          item['tiet_ket_thuc'] ??
+          item['tietKetThuc'] ??
+          item['gio_ket_thuc'] ??
+          item['gioKetThuc'];
+
+      if (rawDate == null || rawDate.toString().trim().isEmpty) return false;
+      if (tenMon == null || tenMon.toString().trim().isEmpty) return false;
+      if (giangVien == null || giangVien.toString().trim().isEmpty) {
+        return false;
+      }
+      if (tietBatDau == null || tietBatDau.toString().trim().isEmpty) {
+        return false;
+      }
+      if (tietKetThuc == null || tietKetThuc.toString().trim().isEmpty) {
+        return false;
+      }
+
+      final date = _parseDate(rawDate.toString());
+      if (date == null) return false;
+      final today = DateTime.now();
+      return !DateTime(
+        date.year,
+        date.month,
+        date.day,
+      ).isBefore(DateTime(today.year, today.month, today.day));
+    }).toList();
+  }
+
+  String _formatDate(String rawDate) {
+    final date = _parseDate(rawDate);
+    if (date == null) return '';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  String _formatTiet(String start, String end) {
+    if (start.isEmpty && end.isEmpty) return '';
+    if (start.isNotEmpty && end.isNotEmpty) return '$start - $end';
+    return start.isNotEmpty ? start : end;
+  }
+
+  DateTime? _parseDate(String rawDate) {
+    try {
+      if (rawDate.contains('T')) {
+        return DateTime.parse(rawDate).toLocal();
+      }
+      final onlyDate = rawDate.split(' ').first;
+      return DateTime.parse(onlyDate).toLocal();
+    } catch (_) {
+      return null;
+    }
   }
 
   Widget _buildRecentAttendance(List<dynamic> recentList) {
@@ -213,16 +398,27 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
 
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           elevation: 0,
           child: ListTile(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
             leading: Container(
               padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8)),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+              ),
               child: const Icon(Icons.qr_code_scanner, color: Colors.green),
             ),
-            title: Text(tenMon, style: const TextStyle(fontWeight: FontWeight.bold)),
+            title: Text(
+              tenMon,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
             subtitle: Text('Trạng thái: $trangThaiStr\n$thoiGian'),
           ),
         );
@@ -239,7 +435,11 @@ class _StudentDashboardScreenState extends State<StudentDashboardScreen> {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Text(message, style: TextStyle(color: Colors.grey.shade500), textAlign: TextAlign.center),
+      child: Text(
+        message,
+        style: TextStyle(color: Colors.grey.shade500),
+        textAlign: TextAlign.center,
+      ),
     );
   }
 }

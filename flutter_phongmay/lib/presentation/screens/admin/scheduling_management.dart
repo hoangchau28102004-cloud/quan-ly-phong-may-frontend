@@ -114,13 +114,14 @@ class _SchedulingManagementScreenState
         }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Lỗi sập mạng: $e'),
             backgroundColor: Colors.red,
           ),
         );
+      }
     }
   }
 
@@ -575,7 +576,7 @@ class _SchedulingManagementScreenState
                               ),
                             ),
                             items: List.generate(
-                              10,
+                              12,
                               (i) => DropdownMenuItem(
                                 value: i + 1,
                                 child: Text('Tiết ${i + 1}'),
@@ -599,7 +600,7 @@ class _SchedulingManagementScreenState
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            items: List.generate(11 - formStartPeriod, (i) {
+                            items: List.generate(13 - formStartPeriod, (i) {
                               int validPeriod = formStartPeriod + i;
                               return DropdownMenuItem(
                                 value: validPeriod,
@@ -682,8 +683,9 @@ class _SchedulingManagementScreenState
 
                           bool isOverlap = schedules.any((s) {
                             if (s['ma_phong'].toString() !=
-                                formRoomId.toString())
+                                formRoomId.toString()) {
                               return false;
+                            }
 
                             String dbDateStr = '';
                             if (s['ngay_hoc_cu_the'] != null) {
@@ -752,7 +754,7 @@ class _SchedulingManagementScreenState
 
                             if (response.statusCode == 200 ||
                                 response.statusCode == 201) {
-                              if (mounted)
+                              if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
                                     content: Text(
@@ -761,6 +763,7 @@ class _SchedulingManagementScreenState
                                     backgroundColor: Colors.green,
                                   ),
                                 );
+                              }
                               if (mounted) Navigator.pop(ctx);
                               _loadData();
                             } else {
@@ -778,13 +781,14 @@ class _SchedulingManagementScreenState
                               }
                             }
                           } catch (e) {
-                            if (mounted)
+                            if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                   content: Text('Sập mạng: $e'),
                                   backgroundColor: Colors.red,
                                 ),
                               );
+                            }
                           }
                         },
                         child: const Text(
@@ -807,7 +811,229 @@ class _SchedulingManagementScreenState
       ),
     );
   }
+  // ================= FORM CHỈNH SỬA LỊCH (DỜI NGÀY / ĐỔI GV) =================
+  void _openEditScheduleModal(dynamic schedule) {
+    // Khởi tạo giá trị ban đầu từ lịch đang chọn
+    int? formTeacherId = int.tryParse(schedule['ma_giang_vien']?.toString() ?? '');
+    DateTime formDate = DateTime.now();
+    
+    if (schedule['ngay_hoc_cu_the'] != null) {
+      formDate = DateTime.tryParse(schedule['ngay_hoc_cu_the'].toString())?.toLocal() ?? DateTime.now();
+    }
 
+    final validTeachers = teachers.where((t) => t != null && t['id'] != null).toList();
+    String className = schedule['ma_lop'] ?? schedule['ma_lhp_str'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 24,
+              right: 24,
+              top: 24,
+            ),
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.65,
+              minChildSize: 0.5,
+              maxChildSize: 0.9,
+              expand: false,
+              builder: (_, scrollController) => SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Center(
+                      child: Container(
+                        width: 50,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Text(
+                      'Điều chỉnh Lịch học',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.orange,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Thông tin cố định (Read-only)
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.orange.shade200),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('📚 Môn: ${schedule['ten_mon']}${className.isNotEmpty ? ' - $className' : ''}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 4),
+                          Text('⏰ Tiết: ${schedule['so_tiet_bat_dau']} - ${schedule['so_tiet_ket_thuc']}  |  Phòng: ${schedule['ten_phong'] ?? 'N/A'}'),
+                          const SizedBox(height: 4),
+                          Text('📌 Loại: ${schedule['loai_lich'] ?? ''}'),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // 1. Chỉnh sửa Giảng viên
+                    DropdownButtonFormField<int>(
+                      isExpanded: true,
+                      value: formTeacherId,
+                      decoration: InputDecoration(
+                        labelText: 'Giáo viên dạy thay/Chính thức',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: validTeachers
+                          .map(
+                            (t) => DropdownMenuItem<int>(
+                              value: int.tryParse(t['id'].toString()),
+                              child: Text(t['ho_ten'] ?? t['ten_giang_vien'] ?? 'N/A'),
+                            ),
+                          )
+                          .where((item) => item.value != null)
+                          .toList(),
+                      onChanged: (v) => setModalState(() => formTeacherId = v),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 2. Chỉnh sửa Ngày học (Dời lịch)
+                    InkWell(
+                      onTap: () async {
+                        final d = await showDatePicker(
+                          context: context,
+                          initialDate: formDate,
+                          firstDate: DateTime(2020),
+                          lastDate: DateTime(2030),
+                        );
+                        if (d != null) setModalState(() => formDate = d);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade400),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Ngày dạy: ${DateFormat('dd/MM/yyyy').format(formDate)}',
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                            const Icon(
+                              Icons.edit_calendar,
+                              color: Colors.orange,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Nút cập nhật
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange.shade700,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          if (formTeacherId == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Vui lòng chọn Giảng viên!'), backgroundColor: Colors.red),
+                            );
+                            return;
+                          }
+
+                          String inputDateStr = DateFormat('yyyy-MM-dd').format(formDate);
+                          
+                          // Tạo payload API
+                          final payload = {
+                            'ma_giang_vien': formTeacherId,
+                            'ngay_hoc_cu_the': inputDateStr,
+                            'thu_trong_tuan': 'Thứ ${formDate.weekday + 1 == 8 ? 'Chủ nhật' : formDate.weekday + 1}',
+                          };
+
+                          try {
+                            // Giả định API cập nhật lịch của Backend dùng method PUT và endpoint có chứa ID
+                            final response = await ApiService.put(
+                              '/schedule/lich-phong/${schedule['id']}',
+                              payload,
+                            );
+
+                            if (response.statusCode == 200 || response.statusCode == 201) {
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Cập nhật lịch thành công!'),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                                Navigator.pop(ctx);
+                                _loadData(); // Load lại data lưới
+                              }
+                            } else {
+                              final resData = ApiService.decodeBody(response);
+                              String errorMsg = resData?['message']?.toString() ?? 'Lỗi hệ thống!';
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(content: Text('Lỗi: $errorMsg'), backgroundColor: Colors.red),
+                                );
+                              }
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Lỗi mạng: $e'), backgroundColor: Colors.red),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text(
+                          'LƯU THAY ĐỔI',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
   void _showImportDialog() {
     PlatformFile? selectedFile;
 
@@ -934,10 +1160,11 @@ class _SchedulingManagementScreenState
   }
 
   Widget _buildTimetableGrid() {
-    if (_selectedRoomId == null)
+    if (_selectedRoomId == null) {
       return const Center(
         child: Text('Vui lòng chọn phòng máy để xem thời khóa biểu'),
       );
+    }
 
     DateTime monday = _currentWeekDate.subtract(
       Duration(days: _currentWeekDate.weekday - 1),
@@ -962,7 +1189,7 @@ class _SchedulingManagementScreenState
               Row(
                 children: [
                   _buildHeaderCell('THỨ / NGÀY', firstColWidth, isFirst: true),
-                  for (int i = 1; i <= 10; i++)
+                  for (int i = 1; i <= 12; i++)
                     _buildHeaderCell('Tiết $i', colWidth),
                 ],
               ),
@@ -987,10 +1214,11 @@ class _SchedulingManagementScreenState
                         DateTime? parsedDate = DateTime.tryParse(
                           s['ngay_hoc_cu_the'].toString(),
                         );
-                        if (parsedDate != null)
+                        if (parsedDate != null) {
                           dbDate = DateFormat(
                             'yyyy-MM-dd',
                           ).format(parsedDate.toLocal());
+                        }
                       }
                       return matchRoom && dbDate == dateDbStr;
                     }).toList();
@@ -1056,7 +1284,7 @@ class _SchedulingManagementScreenState
     );
 
     int currentPeriod = 1;
-    while (currentPeriod <= 10) {
+    while (currentPeriod <= 12) {
       final matches = daySchedules.where((s) {
         int start = int.tryParse(s['so_tiet_bat_dau']?.toString() ?? '0') ?? 0;
         int end = int.tryParse(s['so_tiet_ket_thuc']?.toString() ?? '0') ?? 0;
@@ -1129,45 +1357,45 @@ class _SchedulingManagementScreenState
           bottom: BorderSide(color: Colors.grey.shade300),
         ),
       ),
-      child: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: bgColor,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          // GỌI HÀM MỞ MODAL Ở ĐÂY
+          onTap: () => _openEditScheduleModal(schedule), 
           borderRadius: BorderRadius.circular(6),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              '${schedule['ten_mon']}${className.isNotEmpty ? ' - $className' : ''}',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 11,
-                color: textColor,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+          child: Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: bgColor,
+              borderRadius: BorderRadius.circular(6),
             ),
-            const SizedBox(height: 2),
-            Text(
-              'GV: $gvName',
-              style: TextStyle(fontSize: 10, color: textColor.withOpacity(0.8)),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  '${schedule['ten_mon']}${className.isNotEmpty ? ' - $className' : ''}',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: textColor),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'GV: $gvName',
+                  style: TextStyle(fontSize: 10, color: textColor.withOpacity(0.8)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  loaiLich.toUpperCase(),
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: textColor.withOpacity(0.6)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-            const SizedBox(height: 2),
-            Text(
-              loaiLich.toUpperCase(),
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: textColor.withOpacity(0.6),
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1206,8 +1434,9 @@ class _SchedulingManagementScreenState
 
     List<dynamic> filteredSchedules = schedules.where((s) {
       if (_selectedRoomId != null &&
-          s['ma_phong'].toString() != _selectedRoomId.toString())
+          s['ma_phong'].toString() != _selectedRoomId.toString()) {
         return false;
+      }
       try {
         DateTime date = DateTime.parse(
           s['ngay_hoc_cu_the'].toString(),
@@ -1219,13 +1448,14 @@ class _SchedulingManagementScreenState
       }
     }).toList();
 
-    if (filteredSchedules.isEmpty)
+    if (filteredSchedules.isEmpty) {
       return const Center(
         child: Text(
           'Không có lịch học nào trong tuần này.',
           style: TextStyle(color: Colors.grey),
         ),
       );
+    }
 
     return ListView.builder(
       padding: const EdgeInsets.all(16),
@@ -1245,6 +1475,7 @@ class _SchedulingManagementScreenState
             borderRadius: BorderRadius.circular(10),
           ),
           child: ListTile(
+            onTap: () => _openEditScheduleModal(s),
             contentPadding: const EdgeInsets.all(16),
             leading: CircleAvatar(
               backgroundColor: Colors.blue.shade50,

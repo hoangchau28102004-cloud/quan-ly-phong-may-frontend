@@ -54,8 +54,15 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
   }
 
   void _submitReport() async {
-    // 🚀 Check biến ID (Số)
+    // ---------------------------------------------------------
+    // 🚀🚀🚀 KHU VỰC ĐẶT CAMERA BẮT LỖI
+    // ---------------------------------------------------------
+    print("👉👉👉 [DEBUG] Bắt đầu hàm _submitReport. Bác vừa bấm nút Gửi!");
+
     if (!_formKey.currentState!.validate() || _selectedComputerId == null) {
+      print("❌❌❌ [DEBUG] BỊ CHẶN: Chưa điền đủ form hoặc chưa chọn máy!");
+      print("👉 Form Validate: ${_formKey.currentState?.validate()} | ID Máy: $_selectedComputerId");
+      
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng chọn đầy đủ thông tin máy lỗi!'),
@@ -65,17 +72,35 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
       return;
     }
 
+    print("👉👉👉 [DEBUG] Form OK. Đang lấy dữ liệu User từ Provider...");
     final user = context.read<LoginViewModel>().currentUser;
-    if (user == null) return;
+    
+    print("👉👉👉 [DEBUG] Dữ liệu User lấy ra là: $user");
 
+    if (user == null) {
+      print("💀💀💀 [DEBUG] CHẾT CHỖ NÀY! Biến user bị NULL, hàm bị ngắt, API KHÔNG ĐƯỢC GỌI!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('LỖI: Mất dữ liệu phiên đăng nhập. Vui lòng đăng nhập lại!'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    print("👉👉👉 [DEBUG] Chuẩn bị gọi API với userID = ${user.id}, máyID = $_selectedComputerId");
+    
     final success = await context.read<IssueViewModel>().sendIssueReport(
       maNguoiBaoCao: user.id,
-      maMayTinh: _selectedComputerId!, // 🚀 Gửi đúng chuẩn Int
+      maMayTinh: _selectedComputerId!, 
       loaiSuCo: _selectedType,
       tieuDe: _titleCtrl.text,
       moTa: _descCtrl.text,
       mucDo: _selectedSeverity,
     );
+
+    print("👉👉👉 [DEBUG] Kết quả trả về từ API Backend: $success");
+    // ---------------------------------------------------------
 
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -123,7 +148,7 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                         labelText: 'Chọn phòng học',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      value: _selectedRoomId,
+                      initialValue: _selectedRoomId,
                       items: _rooms.map((r) => DropdownMenuItem<int>(
                               value: int.tryParse(r['id']?.toString() ?? '') ?? 0,
                               child: Text(r['ten_phong']?.toString() ?? ''),
@@ -141,14 +166,13 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
                     const SizedBox(height: 16),
 
                     // CHỌN MÁY TÍNH BỊ LỖI
-                    DropdownButtonFormField<int>( // 🚀 ĐỔI SANG INT
+                    DropdownButtonFormField<int>( 
                       decoration: InputDecoration(
                         labelText: 'Chọn máy tính bị lỗi',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       ),
-                      value: _selectedComputerId,
+                      initialValue: _selectedComputerId,
                       items: issueVM.computers.map((c) {
-                        // 🚀 Kỹ thuật Parse JSON siêu an toàn
                         final int parsedId = int.tryParse(c['id']?.toString() ?? '') ?? 0;
                         return DropdownMenuItem<int>(
                           value: parsedId,

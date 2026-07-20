@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_phongmay/data/datasources/api_service.dart';
 import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/screens/lecturer/urgent_room_booking_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -17,31 +18,34 @@ class RoomBookingScreen extends StatefulWidget {
 class _RoomBookingScreenState extends State<RoomBookingScreen> {
   DateTime _selectedDate = DateTime.now();
 
-  // Để null mặc định để Dropdown ban đầu trống
   int? _tietBatDau;
   int? _tietKetThuc;
 
   List<Map<String, dynamic>> _rooms = [];
-  bool _isLoadingRooms = true;
+  bool _isLoadingRooms = false;
 
   @override
   void initState() {
     super.initState();
-    _fetchAvailableRooms(); // Lấy phòng trống theo ngày và tiết hiện tại
   }
 
   // GỌI API MỚI CÓ KIỂM TRA TRẠNG THÁI
   Future<void> _fetchAvailableRooms() async {
+    if (_tietBatDau == null || _tietKetThuc == null) {
+      if (mounted) {
+        setState(() {
+          _rooms = [];
+          _isLoadingRooms = false;
+        });
+      }
+      return;
+    }
+
     setState(() => _isLoadingRooms = true);
     try {
       final formattedDate = DateFormat('yyyy-MM-dd').format(_selectedDate);
-
-      // SỬA: Xử lý an toàn khi _tietBatDau hoặc _tietKetThuc là null
-      final startParam = _tietBatDau != null ? '$_tietBatDau' : '';
-      final endParam = _tietKetThuc != null ? '$_tietKetThuc' : '';
-
       final res = await ApiService.get(
-        '/phong-may/available?date=$formattedDate&start=$startParam&end=$endParam',
+        '/phong-may/available?date=$formattedDate&start=$_tietBatDau&end=$_tietKetThuc',
       );
 
       if (res.statusCode == 200) {
@@ -52,10 +56,19 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
               _rooms = List<Map<String, dynamic>>.from(body['data'] ?? []);
             });
           }
+        } else if (mounted) {
+          setState(() {
+            _rooms = [];
+          });
         }
       }
     } catch (e) {
       debugPrint("Lỗi tải phòng: $e");
+      if (mounted) {
+        setState(() {
+          _rooms = [];
+        });
+      }
     } finally {
       if (mounted) setState(() => _isLoadingRooms = false);
     }
@@ -406,6 +419,37 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
           ),
 
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12),
+            child: SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                icon: const Icon(Icons.flash_on, size: 20),
+                label: const Text(
+                  'Mượn phòng gấp',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFDD2C00),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  elevation: 0,
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UrgentRoomBookingScreen(),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+
+          Padding(
             padding: const EdgeInsets.all(16.0),
             child: Align(
               alignment: Alignment.centerLeft,
@@ -424,6 +468,13 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
             child: _isLoadingRooms || isLoading
                 ? const Center(
                     child: CircularProgressIndicator(color: kAppBlue),
+                  )
+                : _tietBatDau == null || _tietKetThuc == null
+                ? const Center(
+                    child: Text(
+                      'Vui lòng chọn tiết bắt đầu và tiết kết thúc để xem phòng trống',
+                      textAlign: TextAlign.center,
+                    ),
                   )
                 : _rooms.isEmpty
                 ? const Center(child: Text('Không có dữ liệu phòng'))

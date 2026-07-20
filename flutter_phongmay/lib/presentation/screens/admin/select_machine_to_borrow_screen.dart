@@ -69,7 +69,7 @@ class _SelectMachineToBorrowScreenState
           );
           roomNames.add(room['ten_phong'] ?? 'Khác');
         }
-        _availableRoomsList = ['Tất cả', ...roomNames.toList()];
+        _availableRoomsList = ['Tất cả', ...roomNames];
       }
     } catch (e) {
       debugPrint('Lỗi fetch data: $e');

@@ -143,6 +143,7 @@ class ScheduleViewModel extends ChangeNotifier {
     int tietBatDau,
     int tietKetThuc,
     String mucDich,
+    {String trangThai = 'pending'}
   ) async {
     isLoading = true;
     notifyListeners();
@@ -155,6 +156,7 @@ class ScheduleViewModel extends ChangeNotifier {
       tietBatDau,
       tietKetThuc,
       mucDich,
+      trangThai: trangThai,
     );
 
     isLoading = false;

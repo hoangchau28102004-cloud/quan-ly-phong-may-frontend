@@ -215,10 +215,20 @@ class ImportViewModel extends ChangeNotifier {
       final response = await ApiService.get('/phieu-nhap-may');
       final resData = ApiService.decodeBody(response);
 
-      if (response.statusCode == 200 &&
-          resData != null &&
-          resData['success'] == true) {
-        _receipts = resData['data'] ?? [];
+      if (response.statusCode == 200 && resData != null) {
+        if (resData is List) {
+          _receipts = resData;
+        } else if (resData['data'] is List) {
+          _receipts = resData['data'];
+        } else if (resData['success'] == true && resData['data'] != null) {
+          _receipts = resData['data'];
+        } else {
+          _receipts = [];
+          debugPrint(
+            '=== API fetchReceipts trả về dữ liệu không hợp lệ: $resData ===',
+          );
+        }
+
         debugPrint(
           '=== ĐÃ GÁN DỮ LIỆU VÀO _receipts: ${_receipts.length} PHẦN TỬ ===',
         );

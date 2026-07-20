@@ -70,19 +70,21 @@ class _BorrowReturnManagementScreenState
   Future<void> _updateBorrow(int id, String status) async {
     try {
       await ApiService.put('/muon-may/$id', {'trang_thai': status});
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã cập nhật phiếu mượn!'),
             backgroundColor: Colors.green,
           ),
         );
+      }
       _loadData();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
         );
+      }
     }
   }
 
@@ -101,19 +103,21 @@ class _BorrowReturnManagementScreenState
       await ApiService.put('/tra-may/$returnId', {
         'ma_phieu_muon_id': borrowId,
       });
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Đã xác nhận thu hồi máy thành công!'),
             backgroundColor: Colors.green,
           ),
         );
+      }
       _loadData();
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Lỗi: $e'), backgroundColor: Colors.red),
         );
+      }
     }
   }
 
@@ -214,8 +218,9 @@ class _BorrowReturnManagementScreenState
   // TAB 1: DANH SÁCH MƯỢN MÁY
   // =======================================================================
   Widget _buildBorrowList() {
-    if (borrows.isEmpty)
+    if (borrows.isEmpty) {
       return _buildEmptyState('Chưa có yêu cầu mượn máy nào!');
+    }
 
     return ListView.builder(
       itemCount: borrows.length,
@@ -280,8 +285,9 @@ class _BorrowReturnManagementScreenState
   // TAB 2: LỊCH SỬ TRẢ MÁY
   // =======================================================================
   Widget _buildReturnList() {
-    if (returns.isEmpty)
+    if (returns.isEmpty) {
       return _buildEmptyState('Chưa có lịch sử trả máy nào!');
+    }
 
     return ListView.builder(
       itemCount: returns.length,

@@ -16,8 +16,8 @@ class _ReportIssueScreenState extends State<ReportIssueScreen> {
 
   List<dynamic> _rooms = [];
   int? _selectedRoomId;
-  
-int? _selectedComputerId;
+
+  int? _selectedComputerId;
 
   String _selectedType = 'Phần cứng';
   String _selectedSeverity = 'normal';
@@ -44,9 +44,13 @@ int? _selectedComputerId;
       debugPrint('Lỗi load phòng: $e');
     }
   }
-void _submitReport() async {
+
+  void _submitReport() async {
+    print("👉👉👉 [DEBUG] ĐÃ BẤM NÚT GỬI! Bắt đầu kiểm tra...");
+
     // 🚀 Check biến ID mới
     if (!_formKey.currentState!.validate() || _selectedComputerId == null) {
+      print("❌❌❌ [DEBUG] BỊ CHẶN: Chưa chọn máy tính hoặc chưa điền đủ form!");
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vui lòng chọn đầy đủ thông tin máy lỗi!'),
@@ -56,9 +60,18 @@ void _submitReport() async {
       return;
     }
 
+    print("👉👉👉 [DEBUG] Form OK. Lấy dữ liệu User...");
     final user = context.read<LoginViewModel>().currentUser;
-    if (user == null) return;
+    print("👉👉👉 [DEBUG] User = $user");
 
+    if (user == null) {
+      print("💀💀💀 [DEBUG] LỖI: User bị NULL. Dừng gọi API!");
+      return;
+    }
+
+    print(
+      "👉👉👉 [DEBUG] CHUẨN BỊ GỌI API: UserID = ${user.id} | ComputerID = $_selectedComputerId",
+    );
     final success = await context.read<IssueViewModel>().sendIssueReport(
       maNguoiBaoCao: user.id,
       maMayTinh: _selectedComputerId!, // 🚀 TRUYỀN ĐÚNG SỐ INT XUỐNG BACKEND
@@ -68,6 +81,8 @@ void _submitReport() async {
       mucDo: _selectedSeverity,
     );
 
+    print("👉👉👉 [DEBUG] KẾT QUẢ TỪ BACKEND: success = $success");
+
     if (success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -76,6 +91,13 @@ void _submitReport() async {
         ),
       );
       Navigator.pop(context);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Lỗi khi gửi báo cáo, vui lòng thử lại!'),
+          backgroundColor: Colors.red,
+        ),
+      );
     }
   }
 
@@ -99,16 +121,24 @@ void _submitReport() async {
                   children: [
                     // CHỌN PHÒNG MÁY
                     DropdownButtonFormField<int>(
-                      decoration: const InputDecoration(labelText: 'Chọn phòng học'),
-                      value: _selectedRoomId, // Dùng value thay vì initialValue
-                      items: _rooms.map((r) => DropdownMenuItem<int>(
+                      decoration: const InputDecoration(
+                        labelText: 'Chọn phòng học',
+                      ),
+                      initialValue:
+                          _selectedRoomId, // Dùng value thay vì initialValue
+                      items: _rooms
+                          .map(
+                            (r) => DropdownMenuItem<int>(
                               value: r['id'],
                               child: Text(r['ten_phong']),
-                            )).toList(),
+                            ),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         setState(() {
                           _selectedRoomId = val;
-                          _selectedComputerId = null; // 🚀 Reset biến ID khi đổi phòng
+                          _selectedComputerId =
+                              null; // 🚀 Reset biến ID khi đổi phòng
                         });
                         if (val != null) {
                           context.read<IssueViewModel>().fetchComputers(val);
@@ -118,19 +148,24 @@ void _submitReport() async {
                     const SizedBox(height: 12),
 
                     // CHỌN MÁY TÍNH BỊ LỖI
-                    DropdownButtonFormField<int>( 
-                      decoration: const InputDecoration(labelText: 'Chọn máy tính bị lỗi'),
-                      value: _selectedComputerId, 
+                    DropdownButtonFormField<int>(
+                      decoration: const InputDecoration(
+                        labelText: 'Chọn máy tính bị lỗi',
+                      ),
+                      initialValue:
+                          _selectedComputerId, // Đổi initialValue thành value để an toàn hơn
                       items: issueVM.computers.map((c) {
                         // 🚀 BỌC THÉP ÉP KIỂU: Chống sập app khi ID là String
-                        final int parsedId = int.tryParse(c['id']?.toString() ?? '') ?? 0;
-                        
+                        final int parsedId =
+                            int.tryParse(c['id']?.toString() ?? '') ?? 0;
+
                         return DropdownMenuItem<int>(
-                          value: parsedId, 
+                          value: parsedId,
                           child: Text('${c['ten_may']} (${c['ma_may']})'),
                         );
                       }).toList(),
-                      onChanged: (val) => setState(() => _selectedComputerId = val),
+                      onChanged: (val) =>
+                          setState(() => _selectedComputerId = val),
                     ),
                     const SizedBox(height: 12),
 

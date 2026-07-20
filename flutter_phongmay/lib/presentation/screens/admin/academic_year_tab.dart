@@ -29,10 +29,11 @@ class _AcademicYearTabState extends State<AcademicYearTab> {
         _years = ApiService.decodeBody(res)?['data'] ?? [];
       });
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Lỗi: $e')));
+      }
     }
     setState(() => _isLoading = false);
   }
@@ -97,18 +98,20 @@ class _AcademicYearTabState extends State<AcademicYearTab> {
       try {
         await ApiService.delete('/nam-hoc/$id');
         _loadData();
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Xóa thành công'),
               backgroundColor: Colors.green,
             ),
           );
+        }
       } catch (e) {
-        if (mounted)
+        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Lỗi xóa: $e'), backgroundColor: Colors.red),
           );
+        }
       }
     }
   }

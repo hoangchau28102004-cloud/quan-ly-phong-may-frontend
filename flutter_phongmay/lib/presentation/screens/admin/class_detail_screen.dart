@@ -328,7 +328,7 @@ class _ClassDetailScreenState extends State<ClassDetailScreen> {
                     DropdownButtonFormField<int>(
                       isExpanded: true,
                       // 🚀 ĐÃ FIX: Sử dụng 'value' thay vì 'initialValue' và thêm 'menuMaxHeight'
-                      value: selectedStudentId,
+                      initialValue: selectedStudentId,
                       menuMaxHeight: 400,
                       decoration: InputDecoration(
                         labelText: 'Chọn sinh viên',

@@ -33,6 +33,7 @@ class ScheduleService {
     int tietBatDau,
     int tietKetThuc,
     String mucDich,
+    {String trangThai = 'pending'}
   ) async {
     try {
       final response = await ApiService.post('/schedule/book', {
@@ -43,6 +44,7 @@ class ScheduleService {
         'tiet_bat_dau': tietBatDau,
         'tiet_ket_thuc': tietKetThuc,
         'muc_dich': mucDich,
+        'trang_thai_duyet': trangThai,
       });
       // Kiểm tra API trả về có success = true không
       final data = ApiService.decodeBody(response);

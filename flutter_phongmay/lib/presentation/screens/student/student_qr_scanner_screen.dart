@@ -1,25 +1,30 @@
 import 'package:flutter/material.dart';
-import 'package:mobile_scanner/mobile_scanner.dart'; 
-import 'package:provider/provider.dart'; 
+import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:provider/provider.dart';
 import '../../providers/student_dashboard_viewmodel.dart';
-import '../scanner/student_machine_status_screen.dart'; 
+import '../scanner/student_machine_status_screen.dart';
 import '../../providers/login_viewmodel.dart';
 
 class StudentQRScannerScreen extends StatefulWidget {
   final int scheduleId;
-  
-  const StudentQRScannerScreen({super.key, required this.scheduleId});
-  
+  final String schedulePurpose;
+
+  const StudentQRScannerScreen({
+    super.key,
+    required this.scheduleId,
+    required this.schedulePurpose,
+  });
+
   @override
   State<StudentQRScannerScreen> createState() => _StudentQRScannerScreenState();
 }
 
 class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
   final MobileScannerController _cameraController = MobileScannerController();
-  
+
   // 🚀 CHỈ DÙNG 1 BIẾN DUY NHẤT ĐỂ KHÓA CAMERA
   bool _isProcessing = false;
-  
+
   @override
   void dispose() {
     _cameraController.dispose();
@@ -52,7 +57,9 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
 
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lỗi: Không tìm thấy thông tin Sinh viên!')),
+        const SnackBar(
+          content: Text('Lỗi: Không tìm thấy thông tin Sinh viên!'),
+        ),
       );
       setState(() => _isProcessing = false);
       // ❌ ĐÃ XÓA _cameraController.start() Ở ĐÂY!
@@ -62,10 +69,10 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
     // 4. GỌI API ĐIỂM DANH HOẶC ĐỔI MÁY
     final viewModel = context.read<StudentDashboardViewModel>();
     final responseData = await viewModel.checkInWithQRCode(
-      rawCode,             
-      widget.scheduleId,   
-      userId,              
-      token,               
+      rawCode,
+      widget.scheduleId,
+      userId,
+      token,
     );
 
     if (!mounted) return;
@@ -79,6 +86,7 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
           builder: (context) => StudentMachineStatusScreen(
             qrData: rawCode,
             machineData: responseData['data'], // Ném thông tin máy qua
+            schedulePurpose: widget.schedulePurpose,
           ),
         ),
       );
@@ -88,7 +96,7 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
         icon: Icons.error_rounded,
         color: Colors.redAccent,
         title: 'Thông báo',
-        content: responseData['message'] ?? 'Mã QR không hợp lệ!', 
+        content: responseData['message'] ?? 'Mã QR không hợp lệ!',
         onClose: () {
           Navigator.pop(context); // Đóng popup
           setState(() => _isProcessing = false); // Mở khóa cho phép quét tiếp
@@ -115,22 +123,38 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
           children: [
             Icon(icon, color: color, size: 52),
             const SizedBox(height: 10),
-            Text(title, textAlign: TextAlign.center, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
           ],
         ),
-        content: Text(content, textAlign: TextAlign.center, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+        content: Text(
+          content,
+          textAlign: TextAlign.center,
+          style: const TextStyle(fontSize: 14, color: Colors.black87),
+        ),
         actions: [
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF1E3A8A),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               ),
               onPressed: onClose,
-              child: const Text('Xác nhận', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'Xác nhận',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -149,7 +173,14 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
           icon: const Icon(Icons.arrow_back_ios, color: Colors.white, size: 20),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Quét QR Máy Tính', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Quét QR Máy Tính',
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         centerTitle: true,
       ),
       body: Stack(
@@ -159,10 +190,13 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
             controller: _cameraController,
             onDetect: _handleQrDetection,
           ),
-          
+
           // Lớp Filter tối màu xung quanh
           ColorFiltered(
-            colorFilter: ColorFilter.mode(Colors.black.withOpacity(0.6), BlendMode.srcOut),
+            colorFilter: ColorFilter.mode(
+              Colors.black.withOpacity(0.6),
+              BlendMode.srcOut,
+            ),
             child: Stack(
               children: [
                 Container(color: Colors.transparent),
@@ -179,7 +213,7 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
               ],
             ),
           ),
-          
+
           // Khung viền ngắm QR
           Center(
             child: Container(
@@ -191,7 +225,7 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
               ),
             ),
           ),
-          
+
           // Chữ hướng dẫn
           const Positioned(
             top: 40,
@@ -200,21 +234,27 @@ class _StudentQRScannerScreenState extends State<StudentQRScannerScreen> {
             child: Text(
               'Di chuyển camera vào vùng chứa mã QR trên máy',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white70, fontSize: 14), 
+              style: TextStyle(color: Colors.white70, fontSize: 14),
             ),
           ),
-          
+
           // Lớp Loading (Hiển thị mượt mà khi API đang chạy)
           if (viewModel.isSubmittingAttendance || _isProcessing)
             Container(
-              color: Colors.black87, 
+              color: Colors.black87,
               child: const Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     CircularProgressIndicator(color: Colors.white),
                     SizedBox(height: 16),
-                    Text('Đang xử lý thông tin điểm danh...', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
+                    Text(
+                      'Đang xử lý thông tin điểm danh...',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ],
                 ),
               ),

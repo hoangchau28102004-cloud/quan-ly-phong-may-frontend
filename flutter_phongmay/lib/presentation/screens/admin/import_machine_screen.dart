@@ -58,20 +58,18 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
   DateTime _selectedDate = DateTime.now();
   int? _selectedPhongId; // ma_phong trong DB
 
-  final List<Map<String, dynamic>> _phieuNhaps = [];
-
   int get _generatedMachineCount => int.tryParse(_soLuongController.text) ?? 0;
 
   @override
   void initState() {
     super.initState();
-    _maPhieuController.text =
-        'PN-${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
+    _maPhieuController.text = 'Tự động';
 
-    // GỌI API LẤY DANH SÁCH PHÒNG VÀ TỰ ĐỘNG CHỌN "KHO"
+    // GỌI API LẤY DANH SÁCH PHÒNG VÀ DANH SÁCH PHIẾU NHẬP
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final vm = context.read<ImportViewModel>();
       await vm.fetchRooms();
+      await vm.fetchReceipts();
 
       if (vm.rooms.isNotEmpty && mounted) {
         final khoRoom = vm.rooms.firstWhere(
@@ -138,14 +136,12 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
 
       // 🚀 BƯỚC 1: TẠO DANH SÁCH MÁY THÔNG MINH (CHỐNG TRÙNG LẶP)
       int soLuong = int.tryParse(_soLuongController.text) ?? 1;
-      String maPhieu = _maPhieuController.text;
 
-      // Tạo danh sách máy (Backend sẽ sinh tên/mã máy để tránh trùng lặp)
+      // Tạo danh sách máy (Backend sẽ sinh mã phiếu nhập và mã máy tự động)
       List<Map<String, dynamic>> danhSachMayTuDong = vm
           .generateSmartMachineList(soLuong: soLuong);
       // --- BƯỚC 2: CHUẨN BỊ PAYLOAD TRUYỀN XUỐNG BACKEND ---
       final requestData = {
-        "ma_phieu_nhap": maPhieu,
         "ngay_nhap": DateFormat('yyyy-MM-dd').format(_selectedDate),
         "so_luong": soLuong,
         "nha_cung_cap": _nhaCungCapController.text,
@@ -173,24 +169,11 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
       if (!mounted) return;
 
       if (isSuccess) {
-        // Ghép chuỗi để hiển thị ở bảng giao diện
-        String strStorage = '$_storageType $_storageCapacity';
-        if (_storageType2 != 'Không') {
-          strStorage += ' + $_storageType2 $_storageCapacity2';
-        }
+        await vm.fetchReceipts();
 
         setState(() {
-          _phieuNhaps.insert(0, {
-            'maPhieu': requestData['ma_phieu_nhap'],
-            'ngayNhap': requestData['ngay_nhap'],
-            'soLuong': requestData['so_luong'],
-            'ghiChu':
-                'CPU: ${requestData['bo_xu_ly']} | RAM: ${requestData['ram']} | VGA: ${requestData['card_do_hoa']} | Lưu trữ: $strStorage',
-          });
-
           // Reset Form
-          _maPhieuController.text =
-              'PN-${DateTime.now().millisecondsSinceEpoch.toString().substring(9)}';
+          _maPhieuController.text = 'Tự động';
           _soLuongController.text = '1';
           _nhaCungCapController.clear();
           _ghiChuController.clear();
@@ -281,7 +264,7 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                         children: [
                           Expanded(flex: 4, child: _buildFormCard(vm)),
                           const SizedBox(width: 20),
-                          Expanded(flex: 6, child: _buildListCard()),
+                          Expanded(flex: 6, child: _buildListCard(vm)),
                         ],
                       );
                     }
@@ -290,7 +273,7 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                         children: [
                           _buildFormCard(vm),
                           const SizedBox(height: 20),
-                          _buildListCard(),
+                          _buildListCard(vm),
                         ],
                       ),
                     );
@@ -344,9 +327,11 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                           ? Column(
                               children: [
                                 _buildTextField(
-                                  'Mã phiếu nhập',
+                                  'Mã phiếu nhập (tự động sinh bởi hệ thống)',
                                   _maPhieuController,
                                   enabled: false,
+                                  isRequired: false,
+                                  hint: 'Tự động',
                                 ),
                                 const SizedBox(height: 16),
                                 _buildDatePickerField(),
@@ -356,9 +341,11 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                               children: [
                                 Expanded(
                                   child: _buildTextField(
-                                    'Mã phiếu nhập',
+                                    'Mã phiếu nhập (tự động sinh bởi hệ thống)',
                                     _maPhieuController,
                                     enabled: false,
+                                    isRequired: false,
+                                    hint: 'Tự động',
                                   ),
                                 ),
                                 const SizedBox(width: 16),
@@ -710,7 +697,7 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
     );
   }
 
-  Widget _buildListCard() {
+  Widget _buildListCard(ImportViewModel vm) {
     return Card(
       elevation: 0,
       color: Colors.white,
@@ -778,18 +765,22 @@ class _ImportMachineScreenState extends State<ImportMachineScreen> {
                         ),
                       ),
                     ],
-                    rows: _phieuNhaps
+                    rows: vm.receipts
                         .map(
                           (p) => DataRow(
                             cells: [
-                              DataCell(Text(p['maPhieu'] ?? '')),
-                              DataCell(Text(p['ngayNhap'] ?? '')),
-                              DataCell(Text('${p['soLuong'] ?? 0}')),
+                              DataCell(
+                                Text(p['ma_phieu_nhap']?.toString() ?? ''),
+                              ),
+                              DataCell(Text(p['ngay_nhap']?.toString() ?? '')),
+                              DataCell(Text('${p['so_luong'] ?? 0}')),
                               DataCell(
                                 SizedBox(
                                   width: 300,
                                   child: Text(
-                                    p['ghiChu'] ?? '',
+                                    p['ghi_chu_phieu']?.toString() ??
+                                        p['ghi_chu']?.toString() ??
+                                        '',
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),

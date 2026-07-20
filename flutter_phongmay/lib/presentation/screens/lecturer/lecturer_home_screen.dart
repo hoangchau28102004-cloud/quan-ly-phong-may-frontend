@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_phongmay/presentation/providers/schedule_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/providers/login_viewmodel.dart';
+import 'package:flutter_phongmay/presentation/providers/notification_viewmodel.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/room_booking_screen.dart';
 import 'package:flutter_phongmay/presentation/screens/lecturer/lecturer_profile_screen.dart';
+import 'package:flutter_phongmay/presentation/screens/shared/notification_screen.dart';
 import 'package:intl/intl.dart';
 import 'lecturer_qr_scanner_screen.dart';
 // 🚀 QUAN TRỌNG: Thêm import màn hình Điểm danh để khi bấm "Xem lịch sử" nó biết đường chạy qua
-import 'lecturer_attendance_screen.dart'; 
+import 'lecturer_attendance_screen.dart';
 
 const Color kAppBlue = Color(0xFF193D87);
 
@@ -40,29 +42,46 @@ class _TeacherHomeState extends State<TeacherHome> {
       if (user != null) {
         context.read<ScheduleViewModel>().loadSchedule(
           nguoiDungId: user.id,
-          currentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()), 
+          currentDate: DateFormat('yyyy-MM-dd').format(DateTime.now()),
         );
+        context.read<NotificationViewModel>().loadNotifications(user.id);
       }
     });
   }
 
   void _onBottomNavTapped(int index) {
-    if (index == 1) {
-      // VỊ TRÍ SỐ 2: MƯỢN PHÒNG
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const RoomBookingScreen()),
-      );
-    } else if (index == 2) {
-      // VỊ TRÍ SỐ 3: CÁ NHÂN
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const TeacherProfileScreen()),
-      );
-    } else {
-      // VỊ TRÍ SỐ 1: LỊCH DẠY
-      setState(() => _selectedIndex = index);
-    }
+    // Make bottom navigation behave like tabs (no push/pop). This mirrors StudentLayout behavior.
+    setState(() => _selectedIndex = index);
+  }
+
+  Widget _buildNotificationNavIcon(BuildContext context, bool active) {
+    final unreadCount = context.watch<NotificationViewModel>().unreadCount;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Icon(active ? Icons.notifications : Icons.notifications_none_outlined),
+        if (unreadCount > 0)
+          Positioned(
+            right: -6,
+            top: -6,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                unreadCount > 99 ? '99+' : '$unreadCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -76,14 +95,22 @@ class _TeacherHomeState extends State<TeacherHome> {
               .where((item) => item.thu == _selectedDayIndex + 1)
               .toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F5F9),
-      body: SafeArea(
+    Widget bodyContent;
+
+    // Decide which screen to show based on selected bottom tab
+    if (_selectedIndex == 0) {
+      bodyContent = SafeArea(
+        top: false,
         child: Column(
           children: [
             // --- HEADER THÔNG TIN GIẢNG VIÊN ---
             Container(
-              padding: const EdgeInsets.all(20),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                left: 20,
+                right: 20,
+                bottom: 20,
+              ),
               decoration: const BoxDecoration(
                 color: kAppBlue,
                 borderRadius: BorderRadius.only(
@@ -115,12 +142,19 @@ class _TeacherHomeState extends State<TeacherHome> {
                     children: [
                       Text(
                         user?.hoTen ?? 'Giảng viên',
-                        style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         user?.email ?? 'Chưa cập nhật email',
-                        style: const TextStyle(color: Colors.white70, fontSize: 14),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 14,
+                        ),
                       ),
                     ],
                   ),
@@ -147,9 +181,17 @@ class _TeacherHomeState extends State<TeacherHome> {
                       decoration: BoxDecoration(
                         color: isSelected ? kAppBlue : Colors.white,
                         borderRadius: BorderRadius.circular(12),
-                        border: isSelected ? null : Border.all(color: Colors.grey.shade300),
+                        border: isSelected
+                            ? null
+                            : Border.all(color: Colors.grey.shade300),
                         boxShadow: isSelected
-                            ? [BoxShadow(color: kAppBlue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))]
+                            ? [
+                                BoxShadow(
+                                  color: kAppBlue.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ]
                             : [],
                       ),
                       child: Center(
@@ -172,19 +214,28 @@ class _TeacherHomeState extends State<TeacherHome> {
             // --- DANH SÁCH LỊCH DẠY THEO THỨ ---
             Expanded(
               child: scheduleVM.isLoading
-                  ? const Center(child: CircularProgressIndicator(color: kAppBlue))
+                  ? const Center(
+                      child: CircularProgressIndicator(color: kAppBlue),
+                    )
                   : filteredSchedule.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.event_busy, size: 80, color: Colors.grey.shade300),
+                          Icon(
+                            Icons.event_busy,
+                            size: 80,
+                            color: Colors.grey.shade300,
+                          ),
                           const SizedBox(height: 16),
                           Text(
                             _selectedDayIndex == 0
                                 ? 'Thầy/Cô chưa có lịch dạy trong tuần này'
                                 : 'Thầy/Cô không có lịch dạy vào ${_days[_selectedDayIndex]}',
-                            style: const TextStyle(fontSize: 16, color: Colors.black54),
+                            style: const TextStyle(
+                              fontSize: 16,
+                              color: Colors.black54,
+                            ),
                           ),
                         ],
                       ),
@@ -199,7 +250,20 @@ class _TeacherHomeState extends State<TeacherHome> {
             ),
           ],
         ),
-      ),
+      );
+    } else if (_selectedIndex == 1) {
+      bodyContent = const RoomBookingScreen();
+    } else if (_selectedIndex == 2) {
+      bodyContent = const NotificationScreen();
+    } else {
+      bodyContent = const TeacherProfileScreen();
+    }
+
+    final unreadCount = context.watch<NotificationViewModel>().unreadCount;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F5F9),
+      body: bodyContent,
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onBottomNavTapped,
@@ -208,18 +272,23 @@ class _TeacherHomeState extends State<TeacherHome> {
         backgroundColor: Colors.white,
         elevation: 10,
         type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
+        items: [
+          const BottomNavigationBarItem(
             icon: Icon(Icons.calendar_today_outlined),
             activeIcon: Icon(Icons.calendar_today),
             label: 'Lịch dạy',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
             icon: Icon(Icons.add_box_outlined),
             activeIcon: Icon(Icons.add_box),
             label: 'Mượn phòng',
           ),
           BottomNavigationBarItem(
+            icon: _buildNotificationNavIcon(context, false),
+            activeIcon: _buildNotificationNavIcon(context, true),
+            label: 'Thông báo',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),
             activeIcon: Icon(Icons.person),
             label: 'Cá nhân',
@@ -232,7 +301,8 @@ class _TeacherHomeState extends State<TeacherHome> {
   // --- WIDGET CARD HIỂN THỊ LỚP HỌC CHI TIẾT ---
   Widget _buildTeacherClassCard(item) {
     String thuStr = item.thu == 8 ? 'Chủ Nhật' : 'Thứ ${item.thu}';
-    int tietBatDau = int.tryParse(item.gioBatDau.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
+    int tietBatDau =
+        int.tryParse(item.gioBatDau.replaceAll(RegExp(r'[^0-9]'), '')) ?? 1;
 
     String caHoc = 'Sáng';
     Color badgeColor = Colors.green;
@@ -248,7 +318,7 @@ class _TeacherHomeState extends State<TeacherHome> {
     // 🚀 LÔ-GIC XỬ LÝ 3 MỐC THỜI GIAN
     final apiDate = DateTime.tryParse(item.ngayHoc) ?? DateTime.now();
     final scheduleDate = DateTime(apiDate.year, apiDate.month, apiDate.day);
-    
+
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
 
@@ -276,20 +346,31 @@ class _TeacherHomeState extends State<TeacherHome> {
                   Expanded(
                     child: Text(
                       item.tenMon,
-                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kAppBlue),
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: kAppBlue,
+                      ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
                     decoration: BoxDecoration(
                       color: badgeColor.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
                       'Ca $caHoc',
-                      style: TextStyle(color: badgeColor.withOpacity(0.9), fontWeight: FontWeight.bold, fontSize: 12),
+                      style: TextStyle(
+                        color: badgeColor.withOpacity(0.9),
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
                     ),
                   ),
                 ],
@@ -297,10 +378,18 @@ class _TeacherHomeState extends State<TeacherHome> {
               const Divider(height: 24),
               _buildInfoRow(Icons.room, 'Phòng:', item.tenPhong),
               _buildInfoRow(Icons.groups, 'Lớp:', item.maLop),
-              _buildInfoRow(Icons.access_time, 'Thời gian:', '${item.gioBatDau} - ${item.gioKetThuc}'),
-              _buildInfoRow(Icons.date_range, 'Ngày:', '${item.ngayHoc} ($thuStr)'),
+              _buildInfoRow(
+                Icons.access_time,
+                'Thời gian:',
+                '${item.gioBatDau} - ${item.gioKetThuc}',
+              ),
+              _buildInfoRow(
+                Icons.date_range,
+                'Ngày:',
+                '${item.ngayHoc} ($thuStr)',
+              ),
               const SizedBox(height: 16),
-              
+
               // 🚀 NÚT ĐIỂM DANH THÔNG MINH
               SizedBox(
                 width: double.infinity,
@@ -341,13 +430,20 @@ class _TeacherHomeState extends State<TeacherHome> {
                     foregroundColor: Colors.white,
                     disabledBackgroundColor: Colors.grey.shade300,
                     disabledForegroundColor: Colors.grey.shade600,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   child: Text(
                     isFuture
                         ? 'Chưa đến thời gian'
-                        : (isToday ? 'Điểm Danh Sinh Viên' : 'Xem lịch sử điểm danh'),
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        : (isToday
+                              ? 'Điểm Danh Sinh Viên'
+                              : 'Xem lịch sử điểm danh'),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
                   ),
                 ),
               ),
@@ -358,11 +454,19 @@ class _TeacherHomeState extends State<TeacherHome> {
     );
   }
 
-  void _showClassDetails(BuildContext context, dynamic item, String thuStr, String caHoc, Color badgeColor) {
+  void _showClassDetails(
+    BuildContext context,
+    dynamic item,
+    String thuStr,
+    String caHoc,
+    Color badgeColor,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       builder: (context) {
         return Padding(
           padding: const EdgeInsets.all(24.0),
@@ -374,18 +478,41 @@ class _TeacherHomeState extends State<TeacherHome> {
                 child: Container(
                   width: 50,
                   height: 5,
-                  decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10)),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
               ),
               const SizedBox(height: 20),
-              const Text('Chi Tiết Lớp Học', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: kAppBlue)),
+              const Text(
+                'Chi Tiết Lớp Học',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: kAppBlue,
+                ),
+              ),
               const SizedBox(height: 20),
               _buildDetailRow(Icons.book, 'Môn học:', item.tenMon),
               _buildDetailRow(Icons.room, 'Phòng máy:', item.tenPhong),
               _buildDetailRow(Icons.groups, 'Lớp học:', item.maLop),
-              _buildDetailRow(Icons.wb_sunny, 'Ca học:', 'Ca $caHoc', valueColor: badgeColor),
-              _buildDetailRow(Icons.access_time, 'Thời gian:', '${item.gioBatDau} - ${item.gioKetThuc}'),
-              _buildDetailRow(Icons.date_range, 'Ngày dạy:', '${item.ngayHoc} ($thuStr)'),
+              _buildDetailRow(
+                Icons.wb_sunny,
+                'Ca học:',
+                'Ca $caHoc',
+                valueColor: badgeColor,
+              ),
+              _buildDetailRow(
+                Icons.access_time,
+                'Thời gian:',
+                '${item.gioBatDau} - ${item.gioKetThuc}',
+              ),
+              _buildDetailRow(
+                Icons.date_range,
+                'Ngày dạy:',
+                '${item.ngayHoc} ($thuStr)',
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
@@ -395,10 +522,15 @@ class _TeacherHomeState extends State<TeacherHome> {
                     backgroundColor: Colors.grey.shade200,
                     foregroundColor: Colors.black87,
                     elevation: 0,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
                   ),
                   onPressed: () => Navigator.pop(context),
-                  child: const Text('Đóng', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Đóng',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -416,14 +548,30 @@ class _TeacherHomeState extends State<TeacherHome> {
         children: [
           Icon(icon, size: 18, color: Colors.grey.shade600),
           const SizedBox(width: 8),
-          SizedBox(width: 80, child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700))),
-          Expanded(child: Text(value, style: const TextStyle(color: Colors.black87))),
+          SizedBox(
+            width: 80,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(value, style: const TextStyle(color: Colors.black87)),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildDetailRow(IconData icon, String label, String value, {Color? valueColor}) {
+  Widget _buildDetailRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Row(
@@ -431,8 +579,29 @@ class _TeacherHomeState extends State<TeacherHome> {
         children: [
           Icon(icon, size: 22, color: Colors.grey.shade600),
           const SizedBox(width: 12),
-          SizedBox(width: 100, child: Text(label, style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey.shade700, fontSize: 15))),
-          Expanded(child: Text(value, style: TextStyle(fontSize: 15, color: valueColor ?? Colors.black87, fontWeight: valueColor != null ? FontWeight.bold : FontWeight.normal))),
+          SizedBox(
+            width: 100,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.grey.shade700,
+                fontSize: 15,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 15,
+                color: valueColor ?? Colors.black87,
+                fontWeight: valueColor != null
+                    ? FontWeight.bold
+                    : FontWeight.normal,
+              ),
+            ),
+          ),
         ],
       ),
     );
